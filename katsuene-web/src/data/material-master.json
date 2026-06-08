@@ -1,0 +1,789 @@
+{
+ "range": "部材性能シート!B12:B142",
+ "materials": [
+  {
+   "row": 12,
+   "name": "無し",
+   "R": 0,
+   "thickness": null,
+   "lambda": null,
+   "U": null
+  },
+  {
+   "row": 13,
+   "name": "窯業系サイディング　ｔ15",
+   "R": 0.33003300330033003,
+   "thickness": 50,
+   "lambda": 0.15,
+   "U": 3.03
+  },
+  {
+   "row": 14,
+   "name": "モルタル塗り　ｔ20",
+   "R": 0.01839926402943882,
+   "thickness": 20,
+   "lambda": 1.087,
+   "U": null
+  },
+  {
+   "row": 15,
+   "name": "ALC　ｔ50",
+   "R": 0.29411764705882354,
+   "thickness": 50,
+   "lambda": 0.17,
+   "U": null
+  },
+  {
+   "row": 16,
+   "name": "ALC　ｔ37",
+   "R": 0.21764705882352942,
+   "thickness": 37,
+   "lambda": 0.17,
+   "U": null
+  },
+  {
+   "row": 17,
+   "name": "ALC  t100",
+   "R": 0.5882352941176471,
+   "thickness": 100,
+   "lambda": 0.17,
+   "U": null
+  },
+  {
+   "row": 18,
+   "name": "ラスボード+しっくい",
+   "R": 0.025,
+   "thickness": null,
+   "lambda": null,
+   "U": 40
+  },
+  {
+   "row": 19,
+   "name": "しっくい　ｔ10",
+   "R": 0.013755158184319119,
+   "thickness": 10,
+   "lambda": 0.727,
+   "U": null
+  },
+  {
+   "row": 20,
+   "name": "ラスボード　ｔ7",
+   "R": 0.011437908496732025,
+   "thickness": 7,
+   "lambda": 0.612,
+   "U": null
+  },
+  {
+   "row": 21,
+   "name": "土壁（荒木田）　ｔ90",
+   "R": 0.10067114093959731,
+   "thickness": 90,
+   "lambda": 0.894,
+   "U": null
+  },
+  {
+   "row": 22,
+   "name": "珪藻土　ｔ20",
+   "R": 0.20618556701030927,
+   "thickness": 20,
+   "lambda": 0.097,
+   "U": null
+  },
+  {
+   "row": 23,
+   "name": "畳　ｔ50",
+   "R": 0.3333333333333333,
+   "thickness": 50,
+   "lambda": 0.15,
+   "U": null
+  },
+  {
+   "row": 24,
+   "name": "畳　ｔ30",
+   "R": 0.2,
+   "thickness": 30,
+   "lambda": 0.15,
+   "U": null
+  },
+  {
+   "row": 25,
+   "name": "フローリング　ｔ12",
+   "R": 0.075,
+   "thickness": 12,
+   "lambda": 0.16,
+   "U": null
+  },
+  {
+   "row": 26,
+   "name": "コロニアル葺き",
+   "R": 0.04,
+   "thickness": 12,
+   "lambda": 0.3,
+   "U": null
+  },
+  {
+   "row": 27,
+   "name": "瓦葺き",
+   "R": 0.0225,
+   "thickness": 18,
+   "lambda": 0.8,
+   "U": null
+  },
+  {
+   "row": 28,
+   "name": "金属板葺き",
+   "R": 0.00011904761904761905,
+   "thickness": 6,
+   "lambda": 50.4,
+   "U": null
+  },
+  {
+   "row": 29,
+   "name": "構造用合板 t9",
+   "R": 0.05625,
+   "thickness": 9,
+   "lambda": 0.16,
+   "U": null
+  },
+  {
+   "row": 30,
+   "name": "構造用合板 t12",
+   "R": 0.075,
+   "thickness": 12,
+   "lambda": 0.16,
+   "U": null
+  },
+  {
+   "row": 31,
+   "name": "構造用合板 t24",
+   "R": 0.15,
+   "thickness": 24,
+   "lambda": 0.16,
+   "U": null
+  },
+  {
+   "row": 32,
+   "name": "石膏ボード（GB-R） t9.5",
+   "R": 0.04318181818181818,
+   "thickness": 9.5,
+   "lambda": 0.22,
+   "U": null
+  },
+  {
+   "row": 33,
+   "name": "石膏ボード（GB-R） t12.5",
+   "R": 0.056818181818181816,
+   "thickness": 12.5,
+   "lambda": 0.22,
+   "U": null
+  },
+  {
+   "row": 34,
+   "name": "石膏ボード（GB-R） t15",
+   "R": 0.06818181818181818,
+   "thickness": 15,
+   "lambda": 0.22,
+   "U": null
+  },
+  {
+   "row": 35,
+   "name": "グラスウール 10kg t50",
+   "R": 1,
+   "thickness": 50,
+   "lambda": 0.05,
+   "U": null
+  },
+  {
+   "row": 36,
+   "name": "グラスウール 10kg t75",
+   "R": 1.5,
+   "thickness": 75,
+   "lambda": 0.05,
+   "U": null
+  },
+  {
+   "row": 37,
+   "name": "グラスウール 10kg t100",
+   "R": 2,
+   "thickness": 100,
+   "lambda": 0.05,
+   "U": null
+  },
+  {
+   "row": 38,
+   "name": "グラスウール 16kg t25",
+   "R": 0.5555555555555556,
+   "thickness": 25,
+   "lambda": 0.045,
+   "U": null
+  },
+  {
+   "row": 39,
+   "name": "グラスウール 16kg t40",
+   "R": 0.8888888888888888,
+   "thickness": 40,
+   "lambda": 0.045,
+   "U": null
+  },
+  {
+   "row": 40,
+   "name": "グラスウール 16kg t50",
+   "R": 1.1111111111111112,
+   "thickness": 50,
+   "lambda": 0.045,
+   "U": null
+  },
+  {
+   "row": 41,
+   "name": "グラスウール 16kg t100",
+   "R": 2.2222222222222223,
+   "thickness": 100,
+   "lambda": 0.045,
+   "U": null
+  },
+  {
+   "row": 42,
+   "name": "グラスウール 24kg t25",
+   "R": 0.6578947368421053,
+   "thickness": 25,
+   "lambda": 0.038,
+   "U": null
+  },
+  {
+   "row": 43,
+   "name": "グラスウール 24kg t50",
+   "R": 1.3157894736842106,
+   "thickness": 50,
+   "lambda": 0.038,
+   "U": null
+  },
+  {
+   "row": 44,
+   "name": "グラスウール 24kg t100",
+   "R": 2.6315789473684212,
+   "thickness": 100,
+   "lambda": 0.038,
+   "U": null
+  },
+  {
+   "row": 45,
+   "name": "アクリアマット14K t155",
+   "R": 4.078947368421052,
+   "thickness": 155,
+   "lambda": 0.038,
+   "U": null
+  },
+  {
+   "row": 46,
+   "name": "MAGｲｿﾞﾍﾞｰﾙｽﾀﾝﾀﾞｰﾄﾞ16K t１05　※級5壁",
+   "R": 2.763157894736842,
+   "thickness": 105,
+   "lambda": 0.038,
+   "U": null
+  },
+  {
+   "row": 47,
+   "name": "MAGｲｿﾞﾍﾞｰﾙｽﾀﾝﾀﾞｰﾄﾞ24K t１55　※級5屋",
+   "R": 4.428571428571429,
+   "thickness": 155,
+   "lambda": 0.035,
+   "U": null
+  },
+  {
+   "row": 48,
+   "name": "アクリアネクスト14K t90　※級4壁",
+   "R": 2.3684210526315788,
+   "thickness": 90,
+   "lambda": 0.038,
+   "U": null
+  },
+  {
+   "row": 49,
+   "name": "アクリアウールα36K t１０５　※級6壁",
+   "R": 3.28125,
+   "thickness": 105,
+   "lambda": 0.032,
+   "U": null
+  },
+  {
+   "row": 50,
+   "name": "アクリアマット14K t155×2層　※級6屋",
+   "R": 8.157894736842104,
+   "thickness": 310,
+   "lambda": 0.038,
+   "U": null
+  },
+  {
+   "row": 51,
+   "name": "アクリアウール16K t105×2層　※級4屋",
+   "R": 5.526315789473684,
+   "thickness": 210,
+   "lambda": 0.038,
+   "U": null
+  },
+  {
+   "row": 52,
+   "name": "スタイロエースⅡt65　※級4床",
+   "R": 2.3214285714285716,
+   "thickness": 65,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 53,
+   "name": "MAG床トップﾞ剛床K24 t80　※級5床",
+   "R": 2.2222222222222223,
+   "thickness": 80,
+   "lambda": 0.036,
+   "U": null
+  },
+  {
+   "row": 54,
+   "name": "スタイロエースⅡt20　",
+   "R": 0.7142857142857143,
+   "thickness": 20,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 55,
+   "name": "スタイロエースⅡt25　",
+   "R": 0.8928571428571429,
+   "thickness": 25,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 56,
+   "name": "スタイロエースⅡt30　",
+   "R": 1.0714285714285714,
+   "thickness": 30,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 57,
+   "name": "スタイロエースⅡt35　",
+   "R": 1.25,
+   "thickness": 35,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 58,
+   "name": "スタイロエースⅡt40　",
+   "R": 1.4285714285714286,
+   "thickness": 40,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 59,
+   "name": "スタイロエースⅡt45　",
+   "R": 1.6071428571428572,
+   "thickness": 45,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 60,
+   "name": "スタイロエースⅡt50　",
+   "R": 1.7857142857142858,
+   "thickness": 50,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 61,
+   "name": "スタイロエースⅡt55　",
+   "R": 1.9642857142857142,
+   "thickness": 55,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 62,
+   "name": "アクリアUボードピンレス　ｔ105",
+   "R": 2.9166666666666665,
+   "thickness": 105,
+   "lambda": 0.036,
+   "U": null
+  },
+  {
+   "row": 63,
+   "name": "アクリアUボードピンレスS　ｔ90",
+   "R": 2.5,
+   "thickness": 90,
+   "lambda": 0.036,
+   "U": null
+  },
+  {
+   "row": 64,
+   "name": "スタイロフォームIB t25",
+   "R": 0.6944444444444444,
+   "thickness": 25,
+   "lambda": 0.036,
+   "U": null
+  },
+  {
+   "row": 65,
+   "name": "スタイロフォームIB t30",
+   "R": 0.8333333333333334,
+   "thickness": 30,
+   "lambda": 0.036,
+   "U": null
+  },
+  {
+   "row": 66,
+   "name": "スタイロフォームIB t40",
+   "R": 1.1111111111111112,
+   "thickness": 40,
+   "lambda": 0.036,
+   "U": null
+  },
+  {
+   "row": 67,
+   "name": "スタイロフォームEX　ｔ30",
+   "R": 1.25,
+   "thickness": 30,
+   "lambda": 0.024,
+   "U": null
+  },
+  {
+   "row": 68,
+   "name": "スタイロフォームEX　ｔ45",
+   "R": 1.875,
+   "thickness": 45,
+   "lambda": 0.024,
+   "U": null
+  },
+  {
+   "row": 69,
+   "name": "スタイロフォームEX　ｔ55",
+   "R": 2.2916666666666665,
+   "thickness": 55,
+   "lambda": 0.024,
+   "U": null
+  },
+  {
+   "row": 70,
+   "name": "スタイロフォームFG　ｔ40",
+   "R": 1.8181818181818181,
+   "thickness": 40,
+   "lambda": 0.022,
+   "U": null
+  },
+  {
+   "row": 71,
+   "name": "スタイロフォームFG　ｔ50",
+   "R": 2.272727272727273,
+   "thickness": 50,
+   "lambda": 0.022,
+   "U": null
+  },
+  {
+   "row": 72,
+   "name": "スタイロフォームFG　ｔ75",
+   "R": 3.409090909090909,
+   "thickness": 75,
+   "lambda": 0.022,
+   "U": null
+  },
+  {
+   "row": 73,
+   "name": "スタイロフォームFG　ｔ90　※級6床",
+   "R": 4.090909090909091,
+   "thickness": 90,
+   "lambda": 0.022,
+   "U": null
+  },
+  {
+   "row": 74,
+   "name": "ネオマフォーム t20",
+   "R": 1,
+   "thickness": 20,
+   "lambda": 0.02,
+   "U": null
+  },
+  {
+   "row": 75,
+   "name": "ポリスチレンフォーム t115",
+   "R": 4.107142857142857,
+   "thickness": 115,
+   "lambda": 0.028,
+   "U": null
+  },
+  {
+   "row": 76,
+   "name": "ウレタンボード t10",
+   "R": 0.4166666666666667,
+   "thickness": 10,
+   "lambda": 0.024,
+   "U": null
+  },
+  {
+   "row": 77,
+   "name": "ウレタンボード t15",
+   "R": 0.625,
+   "thickness": 15,
+   "lambda": 0.024,
+   "U": null
+  },
+  {
+   "row": 78,
+   "name": "ウレタンボード t20",
+   "R": 0.8333333333333334,
+   "thickness": 20,
+   "lambda": 0.024,
+   "U": null
+  },
+  {
+   "row": 79,
+   "name": "ウレタンボード t40",
+   "R": 1.6666666666666667,
+   "thickness": 40,
+   "lambda": 0.024,
+   "U": null
+  },
+  {
+   "row": 80,
+   "name": "断熱塗料 t0.8",
+   "R": 0.02666666666666667,
+   "thickness": 0.8,
+   "lambda": 0.03,
+   "U": null
+  },
+  {
+   "row": 81,
+   "name": "アキレスＮＤﾊﾟﾈﾙ t10",
+   "R": 0.5555555555555556,
+   "thickness": 10,
+   "lambda": 0.018,
+   "U": null
+  },
+  {
+   "row": 82,
+   "name": "フォームライト（発砲ウレタン） t10",
+   "R": 0.30303030303030304,
+   "thickness": 10,
+   "lambda": 0.033,
+   "U": null
+  },
+  {
+   "row": 83,
+   "name": "フォームライト（発砲ウレタン） t15",
+   "R": 0.45454545454545453,
+   "thickness": 15,
+   "lambda": 0.033,
+   "U": null
+  },
+  {
+   "row": 84,
+   "name": "フォームライト（発砲ウレタン） t20",
+   "R": 0.6060606060606061,
+   "thickness": 20,
+   "lambda": 0.033,
+   "U": null
+  },
+  {
+   "row": 85,
+   "name": "フォームライト（発砲ウレタン） t25",
+   "R": 0.7575757575757576,
+   "thickness": 25,
+   "lambda": 0.033,
+   "U": null
+  },
+  {
+   "row": 86,
+   "name": "吹き付けロックウール t30",
+   "R": 0.6213367023590083,
+   "thickness": 30,
+   "lambda": 0.048283,
+   "U": null
+  },
+  {
+   "row": 87,
+   "name": "金属サッシ　単板ガラス ",
+   "R": 0.15360983102918588,
+   "thickness": null,
+   "lambda": null,
+   "U": 6.51
+  },
+  {
+   "row": 88,
+   "name": "金属サッシ　ペアガラス　A8以上",
+   "R": 0.24570024570024568,
+   "thickness": null,
+   "lambda": null,
+   "U": 4.07
+  },
+  {
+   "row": 89,
+   "name": "金属サッシ　low-e複層ｶﾞﾗｽ　A7-13",
+   "R": 0.28653295128939826,
+   "thickness": null,
+   "lambda": null,
+   "U": 3.49
+  },
+  {
+   "row": 90,
+   "name": "金属サッシ　low-e複層ｶﾞﾗｽ　A14以上",
+   "R": 0.3436426116838488,
+   "thickness": null,
+   "lambda": null,
+   "U": 2.91
+  },
+  {
+   "row": 91,
+   "name": "金属サッシ　low-e複層ｶﾞﾗｽ　G10未満",
+   "R": 0.28653295128939826,
+   "thickness": null,
+   "lambda": null,
+   "U": 3.49
+  },
+  {
+   "row": 92,
+   "name": "金属サッシ　low-e複層ｶﾞﾗｽ　G10以上",
+   "R": 0.3436426116838488,
+   "thickness": null,
+   "lambda": null,
+   "U": 2.91
+  },
+  {
+   "row": 93,
+   "name": "樹脂サッシ　low-e複層ｶﾞﾗｽ　ｸﾞﾘｰﾝ高遮　A12",
+   "R": 0.625,
+   "thickness": null,
+   "lambda": null,
+   "U": 1.6
+  },
+  {
+   "row": 95,
+   "name": "金属製ドア（単板ガラスなし）",
+   "R": 0.3436426116838488,
+   "thickness": null,
+   "lambda": null,
+   "U": 2.91
+  },
+  {
+   "row": 96,
+   "name": "金属製ドア（単板ガラスあり）",
+   "R": 0.15360983102918588,
+   "thickness": null,
+   "lambda": null,
+   "U": 6.51
+  },
+  {
+   "row": 97,
+   "name": "木製フラッシュ戸",
+   "R": 0.21978021978021978,
+   "thickness": null,
+   "lambda": null,
+   "U": 4.55
+  },
+  {
+   "row": 98,
+   "name": "ふすま",
+   "R": null,
+   "thickness": null,
+   "lambda": null,
+   "U": null
+  },
+  {
+   "row": 99,
+   "name": "和紙障子",
+   "R": 0.00012835817063935206,
+   "thickness": 0.086,
+   "lambda": 0.67,
+   "U": 7790.7
+  },
+  {
+   "row": 101,
+   "name": "ウォールインプラス　ｔ23.5",
+   "R": null,
+   "thickness": null,
+   "lambda": null,
+   "U": null
+  },
+  {
+   "row": 102,
+   "name": "フロアインプラス　ｔ15",
+   "R": 4.8007681228996635,
+   "thickness": null,
+   "lambda": null,
+   "U": 0.2083
+  },
+  {
+   "row": 103,
+   "name": "床暖房パネル",
+   "R": 0.26666666666666666,
+   "thickness": null,
+   "lambda": null,
+   "U": 3.75
+  },
+  {
+   "row": 104,
+   "name": "フェノバボード　ｔ20",
+   "R": 1,
+   "thickness": null,
+   "lambda": null,
+   "U": 1
+  },
+  {
+   "row": 105,
+   "name": "フェノバボード　ｔ25",
+   "R": 1.2987012987012987,
+   "thickness": null,
+   "lambda": null,
+   "U": 0.77
+  },
+  {
+   "row": 106,
+   "name": "フェノバボード　ｔ30",
+   "R": 1.4925373134328357,
+   "thickness": null,
+   "lambda": null,
+   "U": 0.67
+  },
+  {
+   "row": 107,
+   "name": "フェノバボードRS20　ｔ29.5",
+   "R": 1.0526315789473684,
+   "thickness": null,
+   "lambda": null,
+   "U": 0.95
+  },
+  {
+   "row": 108,
+   "name": "フェノバボードRS30　ｔ39.5",
+   "R": 1.5625,
+   "thickness": null,
+   "lambda": null,
+   "U": 0.64
+  },
+  {
+   "row": 109,
+   "name": "スタイロ畳KT-N　3種ｂ　ｔ50",
+   "R": 1.451378809869376,
+   "thickness": null,
+   "lambda": null,
+   "U": 0.689
+  },
+  {
+   "row": 111,
+   "name": "吹付断熱材：クララフォーム-R（ソフティセルONE）",
+   "R": 1.25,
+   "thickness": 50,
+   "lambda": 0.04,
+   "U": null
+  },
+  {
+   "row": 112,
+   "name": "吹付断熱材：クララフォーム-R（クランゼロ）",
+   "R": 1.9230769230769231,
+   "thickness": 50,
+   "lambda": 0.026,
+   "U": null
+  }
+ ]
+}

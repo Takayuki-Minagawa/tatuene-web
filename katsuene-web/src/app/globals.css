@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+:root {
+  --head: #1f6f3f;
+  --headbg: #e8f3ec;
+  --line: #c9c9c9;
+  --input: #fffdf2;
+  --formula: #eef4ff;
+}
+
+html,
+body {
+  background: #f3f4f6;
+  color: #1a1a1a;
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, system-ui,
+    -apple-system, sans-serif;
+}
+
+/* ===== Excel風グリッド ===== */
+.grid-scroll {
+  overflow: auto;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+table.xl-grid {
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+.xl-cell {
+  border: 1px solid #ececec;
+  padding: 1px 4px;
+  height: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+/* 忠実モード(評価シート帳票): 基本グリッド線を消しExcel罫線のみ表示 */
+.xl-grid.faithful .xl-cell {
+  border: none;
+}
+/* 画像配置シート: 行高をExcel基準に合わせるためセルの固定高さを解除 */
+.xl-grid.with-images .xl-cell {
+  height: auto;
+}
+.xl-formula {
+  background: var(--formula);
+  color: #14418a;
+}
+.xl-input {
+  background: var(--input);
+  padding: 0;
+}
+.cell-edit {
+  width: 100%;
+  height: 100%;
+  min-height: 20px;
+  border: 1px solid #b7c4de;
+  background: var(--input);
+  padding: 1px 4px;
+  font-size: 13px;
+  outline: none;
+}
+.cell-edit:focus {
+  border-color: var(--head);
+  box-shadow: 0 0 0 2px rgba(31, 111, 63, 0.15);
+}
+.cell-select {
+  background: #fffdf2;
+  cursor: pointer;
+}
+
+/* ===== 図面エディタ ツールバー ===== */
+.draw-toolbar {
+  position: absolute;
+  left: 0;
+  top: -32px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #c9c9c9;
+  border-radius: 6px;
+  padding: 3px 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  font-size: 12px;
+}
+.draw-label {
+  font-weight: 700;
+  color: var(--head);
+  margin-right: 2px;
+}
+.draw-btn {
+  font-size: 12px;
+  padding: 2px 7px;
+  border: 1px solid #b9c2cc;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+.draw-btn.on {
+  background: var(--head);
+  border-color: var(--head);
+  color: #fff;
+  font-weight: 700;
+}
+.draw-btn.warn {
+  border-color: #d9a3a3;
+  color: #b03030;
+}
+.draw-colors {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.draw-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #b9c2cc;
+  cursor: pointer;
+  padding: 0;
+}
+.draw-color.on {
+  box-shadow: 0 0 0 2px #333;
+}
+.draw-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #555;
+}
+.draw-range input[type="range"] {
+  width: 64px;
+}
+
+.toolbar-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 0;
+}

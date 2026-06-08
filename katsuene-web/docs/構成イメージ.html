@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>かつエネ断熱シミュレーター Web版 — 構成イメージ</title>
+<style>
+  :root{ --line:#c9c9c9; --head:#1f6f3f; --headbg:#e8f3ec; --accent:#1f6f3f; --input:#fffef2; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;color:#222;background:#f3f4f6}
+  header{background:var(--head);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header .logo{font-weight:700;font-size:18px}
+  header .ver{font-size:12px;opacity:.85}
+  header .actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  header button{background:#fff;color:var(--head);border:0;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600}
+  header button.ghost{background:transparent;color:#fff;border:1px solid #ffffff66}
+  .tabs{display:flex;gap:2px;background:#dfe5e1;padding:0 12px;flex-wrap:wrap}
+  .tabs div{padding:9px 16px;font-size:13px;cursor:pointer;border-radius:8px 8px 0 0;background:#cdd6d0}
+  .tabs div.on{background:#fff;font-weight:700;color:var(--head)}
+  .wrap{max-width:1080px;margin:14px auto;padding:0 12px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px}
+  .sec{font-weight:700;color:var(--head);border-left:5px solid var(--accent);padding-left:8px;margin:4px 0 12px}
+  table.form{border-collapse:collapse;width:100%;font-size:13px}
+  table.form th,table.form td{border:1px solid var(--line);padding:6px 8px;text-align:left}
+  table.form th{background:var(--headbg);width:120px;font-weight:600;white-space:nowrap}
+  input,select{border:1px solid #b9b9b9;border-radius:4px;padding:4px 6px;font-size:13px;background:var(--input);width:100%}
+  select{background:#fffef2}
+  .unit{color:#666;font-size:12px;margin-left:4px}
+  .grid{display:grid;grid-template-columns:36px 90px 1fr 1fr 90px;gap:0;font-size:13px;border:1px solid var(--line)}
+  .grid>div{border:1px solid var(--line);padding:5px 6px}
+  .grid .gh{background:var(--headbg);font-weight:600;text-align:center}
+  .calc{background:#eef4ff}
+  .note{background:#fff8e1;border:1px solid #f0d98a;border-radius:6px;padding:10px;font-size:12px;color:#6b5a16;margin-top:10px}
+  .panel-ok{background:#e8f6ec;border:1px solid #9ed3ad;color:#1c6b34;padding:10px;border-radius:6px;font-size:13px}
+  .panel-warn{background:#fff3e0;border:1px solid #f0c081;color:#8a5a12;padding:10px;border-radius:6px;font-size:13px;margin-top:8px}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .report{background:#fff;border:1px solid #888;width:100%;aspect-ratio:297/210;padding:14px;font-size:11px;position:relative}
+  .report h2{margin:0 0 8px;font-size:15px;color:var(--head);text-align:center}
+  .rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .box{border:1px solid #bbb;border-radius:4px;padding:6px}
+  .box .lbl{font-size:10px;color:#666}
+  .box .val{font-size:16px;font-weight:700;color:#1f6f3f}
+  .grade{display:flex;height:18px;margin-top:6px;border:1px solid #bbb;border-radius:3px;overflow:hidden}
+  .grade i{flex:1;border-right:1px solid #fff;font-style:normal;font-size:9px;text-align:center;color:#fff;line-height:18px}
+  .legend{font-size:10px;color:#777;margin-top:8px}
+  .banner{background:#eef4ff;border:1px dashed #9bb8e6;border-radius:6px;padding:8px 12px;font-size:12px;color:#33507e;margin:10px auto;max-width:1080px}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">かつエネ断熱シミュレーター</span>
+  <span class="ver">Web版 Ver.1.7.6</span>
+  <div class="actions">
+    <button class="ghost">📂 JSON読込</button>
+    <button class="ghost">💾 JSON保存</button>
+    <button>✓ データチェック</button>
+    <button>⬇ PDF帳票ダウンロード</button>
+  </div>
+</header>
+
+<div class="banner">これは<strong>レイアウト確認用の静的モックアップ</strong>です。実装版はこの画面にExcel原本の数式エンジン（HyperFormula）を接続し、入力すると自動セルがリアルタイム計算されます。</div>
+
+<div class="tabs">
+  <div>① 表紙</div>
+  <div class="on">② 計算シート（現状）</div>
+  <div>③ 計算シート（改修後）</div>
+  <div>④ 評価シート（帳票）</div>
+  <div>⑤ 部材性能（建材マスタ）</div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <div class="sec">■ 基本データ</div>
+    <table class="form">
+      <tr><th>物件名</th><td><input value="サンプル邸"></td>
+          <th>現場住所</th><td><input value="東京都葛飾区"></td></tr>
+      <tr><th>床面積</th><td><input value="9.93"><span class="unit">㎡</span></td>
+          <th>構造／建築年</th><td>木造 ／ <input value="昭和49" style="width:90px;display:inline-block"> 年</td></tr>
+      <tr><th>外壁面長さ</th><td><input value="3.64"><span class="unit">ｍ</span></td>
+          <th>天井高さ</th><td><input value="2.4"><span class="unit">ｍ</span></td></tr>
+      <tr><th>内外温度差</th><td><input value="1"><span class="unit">℃</span></td>
+          <th>外皮等面積<span class="unit">(自動)</span></th><td class="calc">28.4 ㎡（数式で自動計算）</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="sec">■ 開口部1（窓）</div>
+    <div class="grid">
+      <div class="gh">No</div><div class="gh">方位</div><div class="gh">W（ｍ）</div><div class="gh">H（ｍ）</div><div class="gh">面積㎡</div>
+      <div>①</div><div><select><option>南</option><option>東</option><option>西</option><option>北</option></select></div><div><input value="1.6"></div><div><input value="1.1"></div><div class="calc">1.76</div>
+      <div>②</div><div><select><option>北</option></select></div><div><input value="0.8"></div><div><input value="0.9"></div><div class="calc">0.72</div>
+      <div>③</div><div><select><option></option></select></div><div><input></div><div><input></div><div class="calc">—</div>
+    </div>
+    <p class="unit">※ 面積（㎡）は W×H で自動計算（Excel数式そのまま）</p>
+  </div>
+
+  <div class="card">
+    <div class="sec">■ 外壁部の建材（熱損失計算）</div>
+    <table class="form">
+      <tr><th>建材1</th>
+          <td><select><option>窯業系サイディング ｔ15</option><option>モルタル塗り ｔ20</option><option>無し</option></select></td>
+          <th>R値<span class="unit">(自動)</span></th><td class="calc">0.330</td>
+          <th>U値<span class="unit">(自動)</span></th><td class="calc">3.03</td></tr>
+      <tr><th>建材2</th>
+          <td><select><option>構造用合板 t9</option><option>無し</option></select></td>
+          <th>R値</th><td class="calc">0.056</td>
+          <th>U値</th><td class="calc">17.78</td></tr>
+      <tr><th>通気層</th><td colspan="5"><select style="width:200px"><option>あり（1）</option><option>無し（2）</option></select></td></tr>
+    </table>
+    <div class="note">◇記入上の注意：白いセルのみ入力／建材のブランクは必ず「無し」を選択／面積未記入だと建材を選んでも計算に反映されません。</div>
+  </div>
+
+  <div class="card">
+    <div class="sec">✓ データチェック結果（PDF出力前）</div>
+    <div class="panel-ok">✅ 必須項目・数値域・建材整合：問題なし。PDF出力できます。</div>
+    <div class="panel-warn">⚠ 警告：内壁部に建材が選択されていますが面積が未入力です（計算に反映されません）。確認してください。</div>
+  </div>
+
+  <div class="card">
+    <div class="sec">④ 評価シート（PDF帳票・横向きA4・Excel忠実再現）</div>
+    <div class="report">
+      <h2>かつエネ版　ひと部屋断熱シミュレーター評価シート</h2>
+      <div class="rgrid">
+        <div class="box"><div class="lbl">件名</div><div class="val" style="font-size:12px">サンプル邸</div></div>
+        <div class="box"><div class="lbl">外皮等面積</div><div class="val">28.4 ㎡</div></div>
+        <div class="box"><div class="lbl">総熱損失量（現状→改修）</div><div class="val">312 → 168 W</div></div>
+        <div class="box"><div class="lbl">改善率</div><div class="val">46%</div></div>
+      </div>
+      <div style="margin-top:8px" class="twocol">
+        <div class="box">
+          <div class="lbl">断熱等級（UA値相当）　現状：等級2 → 改修後：等級4</div>
+          <div class="grade">
+            <i style="background:#9e9e9e">1</i><i style="background:#b0a04f">2</i><i style="background:#c0a93f">3</i>
+            <i style="background:#7bb661">4</i><i style="background:#4f9d69">5</i><i style="background:#2e7d52">6</i><i style="background:#1b5e3a">7</i>
+          </div>
+          <div class="legend">等級1:S55基準以下〜等級7:HEAT20 G3</div>
+        </div>
+        <div class="box">
+          <div class="lbl">環境への影響（年間）</div>
+          電気 ▲420 kWh／年　・　電気代 ▲11,340 円／年<br>
+          CO₂ ▲192 kg／年　・　森林 約0.3面（テニスコート換算）
+        </div>
+      </div>
+      <div style="margin-top:8px" class="twocol">
+        <div class="box"><div class="lbl">★熱はどこから逃げている？（現状）</div>
+          <div style="height:46px;width:46px;border-radius:50%;margin:6px auto;background:conic-gradient(#1f6f3f 0 38%,#7bb661 38% 62%,#c0a93f 62% 82%,#b0a04f 82% 100%)"></div>
+          <div class="legend" style="text-align:center">窓38% 壁24% 天井20% 隙間18%（SVG/Chartで再現）</div>
+        </div>
+        <div class="box"><div class="lbl">★部屋の保温効果（エアコン停止後）</div>
+          現状 2.1 時間 → 改修後 4.6 時間<br>
+          <div class="legend">外気温・室内気温の条件で算出</div>
+        </div>
+      </div>
+      <div class="legend" style="position:absolute;bottom:8px;left:14px">診断ソフト：かつエネ断熱シミュレーター ／ 辰の達人診断</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

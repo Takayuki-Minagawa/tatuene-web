@@ -1,5 +1,5 @@
 /**
- * かつエネ断熱シミュレーター 計算エンジン（HyperFormula ラッパ）。
+ * 逹エネ断熱シミュレーター 計算エンジン（HyperFormula ラッパ）。
  *
  * Excel原本の数式を workbook-model.json から読み込み、計算結果を変えない
  * 機械的変換(transform)のみを適用して HyperFormula を構築する。

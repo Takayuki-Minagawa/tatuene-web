@@ -12,6 +12,11 @@ import type { SheetModel } from "@/engine/workbook";
 import { a1ToRC } from "@/engine/workbook";
 import master from "@/data/material-master.json";
 import DrawingEditor from "./DrawingEditor";
+import {
+  DEFAULT_VERSION_SETTINGS,
+  coverVersionLabel,
+  type VersionSettings,
+} from "@/lib/version";
 
 const MATERIALS: string[] = (master as any).materials.map((m: any) => m.name);
 
@@ -121,12 +126,14 @@ export default function SheetGrid({
   faithful = false,
   scale = 1,
   interactiveDrawings = false,
+  versionSettings = DEFAULT_VERSION_SETTINGS,
 }: {
   sheetName: string;
   model: SheetModel;
   faithful?: boolean; // true: Excel忠実(罫線・塗りそのまま・計算セルも素の見た目)
   scale?: number;
   interactiveDrawings?: boolean; // true: 図面枠を編集可能に（false=帳票焼き込み）
+  versionSettings?: VersionSettings;
 }) {
   useEngineVersion(); // 計算セルの再描画購読
   const eng = engine();
@@ -209,6 +216,8 @@ export default function SheetGrid({
                   );
                 } else if (isFormula) {
                   content = eng.getDisplay(sheetName, addr);
+                } else if (sheetName === "表紙" && addr === "B18") {
+                  content = coverVersionLabel(versionSettings);
                 } else if (raw !== null && raw !== undefined) {
                   content = String(raw);
                 }

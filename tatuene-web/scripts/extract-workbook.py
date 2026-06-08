@@ -77,7 +77,7 @@ def resolve_color(color, xlsx):
         return None
     return None
 
-XLSX = os.path.join(ROOT, "..", "data", "Web版_かつエネ断熱シミュレーターVer1-7-6.xlsx")
+XLSX = os.path.join(ROOT, "..", "data", "Web版_逹エネ断熱シミュレーターVer1-0-0.xlsx")
 OUT_MODEL = os.path.join(ROOT, "src", "data", "workbook-model.json")
 OUT_MASTER = os.path.join(ROOT, "src", "data", "material-master.json")
 ASSET_DIR = os.path.join(ROOT, "public", "assets")

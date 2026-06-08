@@ -1,6 +1,6 @@
-# かつエネ断熱シミュレーター Web版
+# 逹エネ断熱シミュレーター Web版
 
-木造住宅ひと部屋断熱改修の効果を簡易判定する「かつエネ断熱シミュレーター」のWeb版（辰の達人診断ユーザー向け）。
+木造住宅ひと部屋断熱改修の効果を簡易判定する「逹エネ断熱シミュレーター」のWeb版（辰の達人診断ユーザー向け）。
 
 ## 設計の核（重要）
 
@@ -8,7 +8,7 @@
 （作成者との契約・東京都評価との同一性を担保）。フォームUIは値の入出力先セルに繋ぐだけ。
 
 - 計算エンジン: [HyperFormula](https://hyperformula.handsontable.com/)（Excel数式をそのまま再計算）
-- 数式抽出: `data/Web版_かつエネ断熱シミュレーターVer1-7-6.xlsx` → `src/data/workbook-model.json`
+- 数式抽出: `data/Web版_逹エネ断熱シミュレーターVer1-0-0.xlsx` → `src/data/workbook-model.json`
 - 忠実性検証: Excelのキャッシュ計算値とJS再計算結果を全数式セルで突合（879/885一致。残6件は
   原本由来の壊れた `#REF!` 数式で、Excel自身も `#VALUE!` エラー＝帳票に影響なし）
 
@@ -32,7 +32,7 @@
 - `src/components/DrawingEditor.tsx` — 図面枠の編集器（アップロード・移動/拡大縮小/回転・直線/矢印/丸数字/テキスト注釈）
 - `src/drawings/store.ts` — 図面の状態ストア（計算エンジンとは独立。画像はメモリ上dataURL、座標は枠ローカルpx）
 - `src/components/ReportFrame.tsx` + `src/lib/pdf.ts` — 評価シート（挿絵・図面を含む）のPDF出力
-- `src/lib/storage.ts` — 保存/読込。保存はZIPバンドル（`katsuene.json`＝入力値・図面メタ ＋ `assets/`＝図面画像）、読込は `.zip`/`.json` 両対応
+- `src/lib/storage.ts` — 保存/読込。保存はZIPバンドル（`tatuene.json`＝入力値・図面メタ ＋ `assets/`＝図面画像）、読込は `.zip`/`.json` 両対応
 
 ## 開発
 

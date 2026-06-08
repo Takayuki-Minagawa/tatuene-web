@@ -35,5 +35,5 @@ export async function exportReportPdf(node: HTMLElement, title: string): Promise
   pdf.addImage(img, "JPEG", x, y, w, h);
 
   const safe = (title || "診断").replace(/[\\/:*?"<>|]/g, "_");
-  pdf.save(`かつエネ断熱_評価シート_${safe}.pdf`);
+  pdf.save(`逹エネ断熱_評価シート_${safe}.pdf`);
 }

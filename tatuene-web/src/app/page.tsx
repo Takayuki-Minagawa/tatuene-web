@@ -9,6 +9,28 @@ import { clearAll as clearDrawings } from "@/drawings/store";
 import { downloadBundle, loadFile } from "@/lib/storage";
 import { validate, type Issue } from "@/engine/validate";
 import { exportReportPdf } from "@/lib/pdf";
+import { DEFAULT_VERSION_SETTINGS, type VersionSettings } from "@/lib/version";
+
+function VersionInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="version-field">
+      <span>{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={`${label}バージョン`}
+      />
+    </label>
+  );
+}
 
 export default function Home() {
   const model = engine().model;
@@ -17,6 +39,7 @@ export default function Home() {
   const [msg, setMsg] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[] | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [versionSettings, setVersionSettings] = useState<VersionSettings>(DEFAULT_VERSION_SETTINGS);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function flash(m: string) {
@@ -57,7 +80,8 @@ export default function Home() {
     const f = e.target.files?.[0];
     if (!f) return;
     try {
-      await loadFile(f);
+      const loadedVersionSettings = await loadFile(f);
+      if (loadedVersionSettings) setVersionSettings(loadedVersionSettings);
       flash(`読込完了: ${f.name}`);
     } catch (err: any) {
       flash(`読込エラー: ${err.message ?? err}`);
@@ -77,8 +101,20 @@ export default function Home() {
         className="flex items-center gap-3 px-4 py-2 text-white flex-wrap"
         style={{ background: "var(--head)" }}
       >
-        <span className="font-bold text-lg">かつエネ断熱シミュレーター</span>
-        <span className="text-xs opacity-80">Web版 Ver.1.7.6</span>
+        <span className="font-bold text-lg">逹エネ断熱シミュレーター</span>
+        <div className="version-settings" aria-label="バージョン管理">
+          <span className="text-xs opacity-85">Web版</span>
+          <VersionInput
+            label="個別"
+            value={versionSettings.individual}
+            onChange={(individual) => setVersionSettings((v) => ({ ...v, individual }))}
+          />
+          <VersionInput
+            label="正式"
+            value={versionSettings.official}
+            onChange={(official) => setVersionSettings((v) => ({ ...v, official }))}
+          />
+        </div>
         <div className="ml-auto flex gap-2 flex-wrap">
           <button
             className="toolbar-btn"
@@ -99,7 +135,7 @@ export default function Home() {
             style={{ background: "transparent", border: "1px solid #ffffff66", color: "#fff" }}
             onClick={async () => {
               try {
-                await downloadBundle();
+                await downloadBundle(versionSettings);
                 flash("保存しました（.zip）");
               } catch (err: any) {
                 flash("保存エラー: " + (err?.message ?? err));
@@ -170,11 +206,12 @@ export default function Home() {
           model={model.sheets[active]}
           faithful={active === "評価シート"}
           interactiveDrawings={active === "評価シート"}
+          versionSettings={versionSettings}
         />
       </main>
 
         {/* PDF捕捉用（オフスクリーン・常時描画） */}
-        <ReportFrame />
+        <ReportFrame versionSettings={versionSettings} />
       </div>
 
       {/* 操作マニュアル（inert領域の外） */}

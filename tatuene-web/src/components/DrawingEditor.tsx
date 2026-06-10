@@ -8,6 +8,7 @@
  */
 import React, { useRef, useState } from "react";
 import type { DrawingSlot } from "@/engine/workbook";
+import { importImageBlob, pickImageFile } from "@/drawings/importImage";
 import {
   useDrawingsVersion,
   getSlot,
@@ -54,6 +55,7 @@ export default function DrawingEditor({
   const [lineWidth, setLineWidth] = useState(3);
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState<Annotation | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const drag = useRef<
     | null
     | { mode: "image"; sx: number; sy: number; ox: number; oy: number }
@@ -80,27 +82,37 @@ export default function DrawingEditor({
     return { x: p.x, y: p.y };
   }
 
-  // ---- ファイルアップロード ----
+  // ---- 画像取り込み（ファイル選択 / D&D / 貼り付けの共通入口） ----
+  async function acceptImage(file: Blob, name: string, confirmReplace: boolean) {
+    if (confirmReplace && state.imageDataUrl && !confirm(`「${slot.label}」の画像を置き換えます。よろしいですか？`)) return;
+    try {
+      const data = await importImageBlob(file, name);
+      setImage(slot.id, data);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "画像を読み込めませんでした");
+    }
+  }
+
   function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const img = new Image();
-      img.onload = () => {
-        setImage(slot.id, {
-          dataUrl,
-          name: f.name,
-          type: f.type || "image/png",
-          natW: img.naturalWidth,
-          natH: img.naturalHeight,
-        });
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(f);
+    if (f) void acceptImage(f, f.name, false);
     e.target.value = "";
+  }
+
+  function onDrop(e: React.DragEvent) {
+    if (!editable) return;
+    e.preventDefault();
+    setDragOver(false);
+    const f = pickImageFile(e.dataTransfer.items) ?? Array.from(e.dataTransfer.files).find((x) => x.type.startsWith("image/"));
+    if (f) void acceptImage(f, f.name, true);
+  }
+
+  function onPaste(e: React.ClipboardEvent) {
+    if (!editable) return;
+    const f = pickImageFile(e.clipboardData?.items);
+    if (!f) return;
+    e.preventDefault();
+    void acceptImage(f, f.name || "クリップボード画像", true);
   }
 
   // ---- ポインタ操作（描画/移動） ----
@@ -238,7 +250,17 @@ export default function DrawingEditor({
   const hasImage = !!state.imageDataUrl;
 
   return (
-    <div style={{ position: "absolute", left: 0, top: 0, width, height }}>
+    <div
+      style={{ position: "absolute", left: 0, top: 0, width, height }}
+      onPaste={onPaste}
+      onDragOver={(e) => {
+        if (!editable) return;
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={onDrop}
+    >
       {/* ツールバー（編集時のみ・枠の上に表示） */}
       {editable && (
         <div className="draw-toolbar" onPointerDown={(e) => e.stopPropagation()}>
@@ -305,8 +327,8 @@ export default function DrawingEditor({
           left: 0,
           top: 0,
           pointerEvents: editable ? "auto" : "none",
-          outline: editable ? "1px dashed #b7c4de" : "none",
-          background: editable && !hasImage ? "rgba(183,196,222,0.06)" : "transparent",
+          outline: dragOver ? "2px dashed #0a84ff" : editable ? "1px dashed #b7c4de" : "none",
+          background: dragOver ? "rgba(10,132,255,0.08)" : editable && !hasImage ? "rgba(183,196,222,0.06)" : "transparent",
           touchAction: "none",
           cursor: tool === "select" ? "default" : "crosshair",
         }}
@@ -327,9 +349,14 @@ export default function DrawingEditor({
         {state.annotations.map(renderAnn)}
         {draft && renderAnn(draft)}
         {editable && !hasImage && (
-          <text x={width / 2} y={height / 2} textAnchor="middle" dominantBaseline="central" fill="#9aa6bd" fontSize={13} style={{ pointerEvents: "none", userSelect: "none" }}>
-            「画像」から図面をアップロード
-          </text>
+          <>
+            <text x={width / 2} y={height / 2 - 10} textAnchor="middle" dominantBaseline="central" fill="#9aa6bd" fontSize={13} style={{ pointerEvents: "none", userSelect: "none" }}>
+              「画像」ボタン / ドラッグ&ドロップ
+            </text>
+            <text x={width / 2} y={height / 2 + 10} textAnchor="middle" dominantBaseline="central" fill="#9aa6bd" fontSize={13} style={{ pointerEvents: "none", userSelect: "none" }}>
+              枠をクリックして Ctrl+V で貼り付け
+            </text>
+          </>
         )}
       </svg>
     </div>

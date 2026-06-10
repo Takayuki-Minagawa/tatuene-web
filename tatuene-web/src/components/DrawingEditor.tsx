@@ -10,6 +10,13 @@ import React, { useRef, useState } from "react";
 import type { DrawingSlot } from "@/engine/workbook";
 import { importImageBlob, pickImageFile } from "@/drawings/importImage";
 import {
+  fitContain,
+  imageCorners,
+  scaleFromHandleDrag,
+  rotationFromHandleDrag,
+  type Pt,
+} from "@/drawings/geometry";
+import {
   useDrawingsVersion,
   getSlot,
   setImage,
@@ -27,14 +34,10 @@ type Tool = "select" | "line" | "arrow" | "number" | "text";
 
 const COLORS = ["#d32f2f", "#1565c0", "#000000", "#2e7d32", "#f9a825"];
 
-/** 画像を箱に contain フィットしたときの寸法と左上座標 */
-function fitContain(natW: number, natH: number, boxW: number, boxH: number) {
-  if (!natW || !natH) return { w: boxW, h: boxH, x: 0, y: 0 };
-  const s = Math.min(boxW / natW, boxH / natH);
-  const w = natW * s,
-    h = natH * s;
-  return { w, h, x: (boxW - w) / 2, y: (boxH - h) / 2 };
-}
+/** 画像選択を表す selected の特殊値（注釈IDは a<number> 形式なので衝突しない） */
+const IMAGE_SELECTION = "__image__";
+
+type Corner = "tl" | "tr" | "br" | "bl";
 
 export default function DrawingEditor({
   slot,
@@ -61,6 +64,8 @@ export default function DrawingEditor({
     | { mode: "image"; sx: number; sy: number; ox: number; oy: number }
     | { mode: "ann"; id: string; sx: number; sy: number; orig: Annotation }
     | { mode: "draw"; sx: number; sy: number }
+    | { mode: "img-scale"; handle: Corner; startPt: Pt; startScale: number; center: Pt }
+    | { mode: "img-rotate"; startPt: Pt; startRotation: number; center: Pt }
   >(null);
 
   const fit = fitContain(state.natW ?? 0, state.natH ?? 0, width, height);
@@ -70,6 +75,7 @@ export default function DrawingEditor({
   const cx = imgX + fit.w / 2;
   const cy = imgY + fit.h / 2;
   const imgTransform = `rotate(${t.rotation} ${cx} ${cy}) translate(${cx} ${cy}) scale(${t.scale}) translate(${-cx} ${-cy})`;
+  const corners = imageCorners(fit, t);
 
   function toLocal(e: React.PointerEvent): { x: number; y: number } {
     const svg = svgRef.current!;
@@ -142,6 +148,10 @@ export default function DrawingEditor({
       setDraft((cur) => (cur && (cur.type === "line" || cur.type === "arrow") ? { ...cur, x2: p.x, y2: p.y } : cur));
     } else if (d.mode === "image") {
       setTransform(slot.id, { x: d.ox + (p.x - d.sx), y: d.oy + (p.y - d.sy) });
+    } else if (d.mode === "img-scale") {
+      setTransform(slot.id, { scale: scaleFromHandleDrag(d.center, d.startPt, p, d.startScale) });
+    } else if (d.mode === "img-rotate") {
+      setTransform(slot.id, { rotation: rotationFromHandleDrag(d.center, d.startPt, p, d.startRotation, e.shiftKey) });
     } else if (d.mode === "ann") {
       const dx = p.x - d.sx,
         dy = p.y - d.sy;
@@ -173,7 +183,29 @@ export default function DrawingEditor({
     const p = toLocal(e);
     svgRef.current?.setPointerCapture(e.pointerId);
     drag.current = { mode: "image", sx: p.x, sy: p.y, ox: t.x, oy: t.y };
-    setSelected(null);
+    setSelected(IMAGE_SELECTION);
+  }
+
+  function onScaleHandleDown(e: React.PointerEvent<SVGGElement>) {
+    if (!editable) return;
+    e.stopPropagation();
+    const handle = (e.currentTarget.dataset.handle ?? "br") as Corner;
+    const p = toLocal(e);
+    svgRef.current?.setPointerCapture(e.pointerId);
+    drag.current = { mode: "img-scale", handle, startPt: p, startScale: t.scale, center: corners.center };
+  }
+
+  function onRotateHandleDown(e: React.PointerEvent) {
+    if (!editable) return;
+    e.stopPropagation();
+    const p = toLocal(e);
+    svgRef.current?.setPointerCapture(e.pointerId);
+    drag.current = { mode: "img-rotate", startPt: p, startRotation: t.rotation, center: corners.center };
+  }
+
+  function cancelDrag() {
+    drag.current = null;
+    setDraft(null);
   }
 
   function onAnnPointerDown(e: React.PointerEvent, ann: Annotation) {
@@ -187,6 +219,22 @@ export default function DrawingEditor({
 
   function onKeyDown(e: React.KeyboardEvent) {
     if (!editable) return;
+    if (selected === IMAGE_SELECTION && hasImage) {
+      // 画像選択中: 矢印キーで微調整（Shiftで10px）。削除は「図面削除」ボタンに限定。
+      const step = e.shiftKey ? 10 : 1;
+      const move: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const m = move[e.key];
+      if (m) {
+        e.preventDefault();
+        setTransform(slot.id, { x: t.x + m[0], y: t.y + m[1] });
+      }
+      return;
+    }
     if ((e.key === "Delete" || e.key === "Backspace") && selected) {
       e.preventDefault();
       removeAnnotation(slot.id, selected);
@@ -247,6 +295,47 @@ export default function DrawingEditor({
     );
   }
 
+  // ---- 画像選択時のバウンディングボックスと操作ハンドル（PDF側 editable=false では呼ばれない） ----
+  function renderImageHandles() {
+    const { tl, tr, br, bl, center } = corners;
+    const topMid = { x: (tl.x + tr.x) / 2, y: (tl.y + tr.y) / 2 };
+    const len = Math.hypot(topMid.x - center.x, topMid.y - center.y) || 1;
+    const rot = {
+      x: topMid.x + ((topMid.x - center.x) / len) * 24,
+      y: topMid.y + ((topMid.y - center.y) / len) * 24,
+    };
+    const handles: [Corner, Pt, string][] = [
+      ["tl", tl, "nwse-resize"],
+      ["tr", tr, "nesw-resize"],
+      ["br", br, "nwse-resize"],
+      ["bl", bl, "nesw-resize"],
+    ];
+    return (
+      <g>
+        <polygon
+          points={`${tl.x},${tl.y} ${tr.x},${tr.y} ${br.x},${br.y} ${bl.x},${bl.y}`}
+          fill="none"
+          stroke="#0a84ff"
+          strokeWidth={1}
+          strokeDasharray="4 3"
+          style={{ pointerEvents: "none" }}
+        />
+        <line x1={topMid.x} y1={topMid.y} x2={rot.x} y2={rot.y} stroke="#0a84ff" strokeWidth={1} style={{ pointerEvents: "none" }} />
+        {handles.map(([k, pt, cursor]) => (
+          <g key={k} data-handle={k} onPointerDown={onScaleHandleDown} style={{ cursor }}>
+            {/* タッチ向けの広い当たり判定 */}
+            <rect x={pt.x - 12} y={pt.y - 12} width={24} height={24} fill="transparent" />
+            <rect x={pt.x - 5} y={pt.y - 5} width={10} height={10} fill="#fff" stroke="#0a84ff" strokeWidth={1.5} style={{ pointerEvents: "none" }} />
+          </g>
+        ))}
+        <g onPointerDown={onRotateHandleDown} style={{ cursor: "grab" }}>
+          <circle cx={rot.x} cy={rot.y} r={12} fill="transparent" />
+          <circle cx={rot.x} cy={rot.y} r={5} fill="#fff" stroke="#0a84ff" strokeWidth={1.5} style={{ pointerEvents: "none" }} />
+        </g>
+      </g>
+    );
+  }
+
   const hasImage = !!state.imageDataUrl;
 
   return (
@@ -290,18 +379,15 @@ export default function DrawingEditor({
             <input type="range" min={1} max={8} value={lineWidth} onChange={(e) => setLineWidth(Number(e.target.value))} />
           </label>
           {hasImage && (
-            <>
-              <label className="draw-range" title="拡大縮小">
-                拡
-                <input type="range" min={0.2} max={3} step={0.05} value={t.scale} onChange={(e) => setTransform(slot.id, { scale: Number(e.target.value) })} />
-              </label>
-              <label className="draw-range" title="回転">
-                回
-                <input type="range" min={-180} max={180} value={t.rotation} onChange={(e) => setTransform(slot.id, { rotation: Number(e.target.value) })} />
-              </label>
-            </>
+            <button
+              className="draw-btn"
+              title="画像の位置・拡大率・回転を初期状態に戻す"
+              onClick={() => setTransform(slot.id, { x: 0, y: 0, scale: 1, rotation: 0 })}
+            >
+              フィット
+            </button>
           )}
-          {selected && (
+          {selected && selected !== IMAGE_SELECTION && (
             <button className="draw-btn warn" onClick={() => { removeAnnotation(slot.id, selected); setSelected(null); }}>
               注釈削除
             </button>
@@ -322,6 +408,7 @@ export default function DrawingEditor({
         onPointerDown={onSvgPointerDown}
         onPointerMove={onSvgPointerMove}
         onPointerUp={onSvgPointerUp}
+        onPointerCancel={cancelDrag}
         style={{
           position: "absolute",
           left: 0,
@@ -348,6 +435,7 @@ export default function DrawingEditor({
         )}
         {state.annotations.map(renderAnn)}
         {draft && renderAnn(draft)}
+        {editable && hasImage && selected === IMAGE_SELECTION && renderImageHandles()}
         {editable && !hasImage && (
           <>
             <text x={width / 2} y={height / 2 - 10} textAnchor="middle" dominantBaseline="central" fill="#9aa6bd" fontSize={13} style={{ pointerEvents: "none", userSelect: "none" }}>

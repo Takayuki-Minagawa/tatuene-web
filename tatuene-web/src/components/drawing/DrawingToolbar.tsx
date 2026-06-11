@@ -121,6 +121,7 @@ export default function DrawingToolbar({
               step={0.05}
               value={t.opacity ?? 1}
               onPointerDown={() => snapshot(slot.id)}
+              onKeyDown={() => snapshot(slot.id)}
               onChange={(e) => setTransform(slot.id, { opacity: Number(e.target.value) })}
             />
           </label>
@@ -133,6 +134,7 @@ export default function DrawingToolbar({
               step={0.05}
               value={t.brightness ?? 1}
               onPointerDown={() => snapshot(slot.id)}
+              onKeyDown={() => snapshot(slot.id)}
               onChange={(e) => setTransform(slot.id, { brightness: Number(e.target.value) })}
             />
           </label>

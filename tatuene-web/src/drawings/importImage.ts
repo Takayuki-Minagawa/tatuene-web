@@ -85,8 +85,8 @@ export async function importImageBlob(
 
     if (!needsResize) {
       const dataUrl = await readAsDataURL(blob);
-      // 小さい画像はそのまま。大きい無圧縮画像（巨大PNGスキャン等）のみ JPEG 化。
-      if (dataUrl.length <= passthroughLimit || keepsAlpha) {
+      // 小さい画像はそのまま。上限超過（巨大PNGスキャン等）は形式を問わず再エンコードへ。
+      if (dataUrl.length <= passthroughLimit) {
         return { dataUrl, type: blob.type || "image/png", natW: width, natH: height, name };
       }
     }
@@ -100,8 +100,9 @@ export async function importImageBlob(
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("canvas を利用できません");
 
-    // 縮小しても小さく収まる透過画像は PNG を維持、それ以外は白背景 JPEG
-    const usePng = keepsAlpha && needsResize;
+    // 透過を持ちうる画像はまず PNG で再エンコードを試み、
+    // それでも上限を超える場合のみ白背景 JPEG に落とす
+    const usePng = keepsAlpha;
     if (!usePng) {
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, w, h);

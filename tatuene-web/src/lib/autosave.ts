@@ -87,7 +87,13 @@ export async function loadDraft(): Promise<Draft | null> {
   return { data, images };
 }
 
+// clearDraft のたびに増えるエポック。スケジュール済みの自動保存は
+// 自分のエポックが古くなっていたら発火を取りやめる（保存直後の
+// 残存デバウンスがドラフトを再作成するのを防ぐ）。
+let draftEpoch = 0;
+
 export function clearDraft(): void {
+  draftEpoch++;
   try {
     localStorage.removeItem(DRAFT_KEY);
   } catch {
@@ -124,7 +130,9 @@ export function useDraftAutosave(versionSettings: VersionSettings): void {
       skipOnce = false;
       return;
     }
+    const myEpoch = draftEpoch;
     const timer = setTimeout(() => {
+      if (myEpoch !== draftEpoch) return; // この保存予約より後に clearDraft された
       void saveDraft(versionSettings);
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);

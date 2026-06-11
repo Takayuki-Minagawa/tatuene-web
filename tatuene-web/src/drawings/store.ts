@@ -21,6 +21,12 @@ export interface ImageTransform {
   y: number;
   scale: number; // 拡大縮小(1=原寸フィット)
   rotation: number; // 回転(度)
+  // 以下は後方互換のため全てオプショナル（旧保存ファイルには存在しない）
+  flipH?: boolean; // 左右反転
+  flipV?: boolean; // 上下反転
+  opacity?: number; // 0..1（既定1）
+  brightness?: number; // 0.5..2（既定1）
+  crop?: { x: number; y: number; w: number; h: number }; // フィット矩形に対する割合（既定=全体）
 }
 
 export interface SlotState {
@@ -49,6 +55,78 @@ const DEFAULT_TRANSFORM: ImageTransform = { x: 0, y: 0, scale: 1, rotation: 0 };
 const slots = new Map<string, SlotState>();
 let version = 0;
 const listeners = new Set<() => void>();
+
+// ---- Undo/Redo 履歴 ----
+// スナップショット方式・スロット単位エントリのグローバル単一スタック。
+// 連続操作（ドラッグ中の setTransform 等）が1操作=1エントリになるよう、
+// ジェスチャ開始時に snapshot() で「保留」し、最初の実変更時に積む。
+type HistEntry = { slotId: string; before: SlotState };
+const HISTORY_LIMIT = 50;
+const undoStack: HistEntry[] = [];
+const redoStack: HistEntry[] = [];
+let pendingSnapshot: HistEntry | null = null;
+
+function cloneSlot(s: SlotState): SlotState {
+  return {
+    ...s,
+    transform: { ...s.transform, crop: s.transform.crop ? { ...s.transform.crop } : undefined },
+    annotations: s.annotations.map((a) => ({ ...a })),
+  };
+}
+
+/** ジェスチャ開始時に呼ぶ。変更が実際に起きるまで履歴には積まない。 */
+export function snapshot(id: string) {
+  pendingSnapshot = { slotId: id, before: cloneSlot(getSlot(id)) };
+}
+
+function pushEntry(e: HistEntry) {
+  undoStack.push(e);
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+  pendingSnapshot = null;
+}
+
+/** 保留中スナップショットを履歴へ確定（連続系ミューテータが変更直前に呼ぶ） */
+function commitPending(id: string) {
+  if (pendingSnapshot?.slotId === id) pushEntry(pendingSnapshot);
+}
+
+/** 離散操作用: 現在状態を直接履歴へ積む */
+function pushHistory(id: string) {
+  pushEntry({ slotId: id, before: cloneSlot(getSlot(id)) });
+}
+
+function clearHistory() {
+  undoStack.length = 0;
+  redoStack.length = 0;
+  pendingSnapshot = null;
+}
+
+export function canUndo(): boolean {
+  return undoStack.length > 0;
+}
+export function canRedo(): boolean {
+  return redoStack.length > 0;
+}
+
+export function undo() {
+  const e = undoStack.pop();
+  if (!e) return;
+  pendingSnapshot = null;
+  redoStack.push({ slotId: e.slotId, before: cloneSlot(getSlot(e.slotId)) });
+  slots.set(e.slotId, cloneSlot(e.before));
+  emit();
+}
+
+export function redo() {
+  const e = redoStack.pop();
+  if (!e) return;
+  pendingSnapshot = null;
+  undoStack.push({ slotId: e.slotId, before: cloneSlot(getSlot(e.slotId)) });
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  slots.set(e.slotId, cloneSlot(e.before));
+  emit();
+}
 
 function emit() {
   version++;
@@ -84,6 +162,7 @@ export function setImage(
   id: string,
   data: { dataUrl: string; name: string; type: string; natW: number; natH: number }
 ) {
+  pushHistory(id);
   const s = getSlot(id);
   s.imageDataUrl = data.dataUrl;
   s.imageName = data.name;
@@ -95,17 +174,20 @@ export function setImage(
 }
 
 export function setTransform(id: string, patch: Partial<ImageTransform>) {
+  commitPending(id);
   const s = getSlot(id);
   s.transform = { ...s.transform, ...patch };
   emit();
 }
 
 export function addAnnotation(id: string, ann: Annotation) {
+  pushHistory(id);
   getSlot(id).annotations.push(ann);
   emit();
 }
 
 export function updateAnnotation(id: string, annId: string, patch: Partial<Annotation>) {
+  commitPending(id);
   const s = getSlot(id);
   const i = s.annotations.findIndex((a) => a.id === annId);
   if (i >= 0) s.annotations[i] = { ...s.annotations[i], ...patch } as Annotation;
@@ -113,6 +195,7 @@ export function updateAnnotation(id: string, annId: string, patch: Partial<Annot
 }
 
 export function removeAnnotation(id: string, annId: string) {
+  pushHistory(id);
   const s = getSlot(id);
   s.annotations = s.annotations.filter((a) => a.id !== annId);
   emit();
@@ -126,13 +209,15 @@ export function nextNumber(id: string): number {
 
 /** 図面全体を削除（差し替え用）。 */
 export function clearSlot(id: string) {
+  pushHistory(id);
   slots.set(id, { transform: { ...DEFAULT_TRANSFORM }, annotations: [] });
   emit();
 }
 
-/** 全枠をクリア（読込・初期化時） */
+/** 全枠をクリア（読込・初期化時）。履歴も破棄する。 */
 export function clearAll() {
   slots.clear();
+  clearHistory();
   emit();
 }
 
@@ -159,6 +244,7 @@ export function collectMeta(): Record<string, SlotMeta> {
 /** メタ＋画像dataURLマップから状態を復元（読込時）。 */
 export function restore(meta: Record<string, SlotMeta>, images: Record<string, string>) {
   slots.clear();
+  clearHistory(); // ファイル読込を跨いだ Undo は不可（古い画像参照に戻さない）
   let maxSeq = 0;
   for (const [id, m] of Object.entries(meta)) {
     const annotations = m.annotations ?? [];
@@ -172,7 +258,7 @@ export function restore(meta: Record<string, SlotMeta>, images: Record<string, s
       imageType: m.imageType,
       natW: m.natW,
       natH: m.natH,
-      transform: m.transform ?? { ...DEFAULT_TRANSFORM },
+      transform: { ...DEFAULT_TRANSFORM, ...(m.transform ?? {}) },
       annotations,
     });
   }

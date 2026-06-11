@@ -77,7 +77,8 @@ export async function downloadBundle(versionSettings?: VersionSettings) {
   triggerDownload(blob, `逹エネ断熱_${safeTitle}.zip`);
 }
 
-function applyData(data: SaveFile, images: Record<string, string>): VersionSettings | null {
+/** 保存データを反映（ファイル読込・ドラフト復元の共通処理）。 */
+export function applyData(data: SaveFile, images: Record<string, string>): VersionSettings | null {
   if ((data.app !== SAVE_APP_ID && data.app !== LEGACY_SAVE_APP_ID) || !data.inputs) {
     throw new Error("このファイルは逹エネ断熱シミュレーターの保存データではありません。");
   }

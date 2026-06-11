@@ -1,12 +1,13 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import SheetGrid from "@/components/SheetGrid";
 import CheckPanel from "@/components/CheckPanel";
 import Manual from "@/components/Manual";
 import ReportFrame, { REPORT_FRAME_ID } from "@/components/ReportFrame";
 import { engine, resetDefaults } from "@/engine/store";
 import { clearAll as clearDrawings } from "@/drawings/store";
-import { downloadBundle, loadFile } from "@/lib/storage";
+import { downloadBundle, loadFile, applyData } from "@/lib/storage";
+import { useDraftAutosave, loadDraft, clearDraft, skipNextAutosave } from "@/lib/autosave";
 import { validate, type Issue } from "@/engine/validate";
 import { exportReportPdf } from "@/lib/pdf";
 import { DEFAULT_VERSION_SETTINGS, type VersionSettings } from "@/lib/version";
@@ -47,6 +48,30 @@ export default function Home() {
     setTimeout(() => setMsg(null), 3500);
   }
 
+  // 編集内容のドラフト自動保存（再読込・クラッシュ対策）と起動時の復元確認
+  useDraftAutosave(versionSettings);
+  const draftChecked = useRef(false);
+  useEffect(() => {
+    if (draftChecked.current) return;
+    draftChecked.current = true;
+    void (async () => {
+      const draft = await loadDraft();
+      if (!draft) return;
+      const when = draft.data.savedAt ? new Date(draft.data.savedAt).toLocaleString("ja-JP") : "日時不明";
+      if (confirm(`前回の編集データが残っています（${when}）。復元しますか？`)) {
+        try {
+          const vs = applyData(draft.data, draft.images);
+          if (vs) setVersionSettings(vs);
+          flash("前回の編集を復元しました");
+        } catch (err) {
+          flash("復元に失敗しました: " + (err instanceof Error ? err.message : String(err)));
+        }
+      } else {
+        clearDraft();
+      }
+    })();
+  }, []);
+
   function runCheck() {
     setIssues(validate(engine()));
   }
@@ -80,8 +105,10 @@ export default function Home() {
     const f = e.target.files?.[0];
     if (!f) return;
     try {
+      skipNextAutosave();
       const loadedVersionSettings = await loadFile(f);
       if (loadedVersionSettings) setVersionSettings(loadedVersionSettings);
+      clearDraft(); // 明示的な読込でドラフトは破棄（以後の編集で再作成される）
       flash(`読込完了: ${f.name}`);
     } catch (err: any) {
       flash(`読込エラー: ${err.message ?? err}`);
@@ -136,6 +163,7 @@ export default function Home() {
             onClick={async () => {
               try {
                 await downloadBundle(versionSettings);
+                clearDraft();
                 flash("保存しました（.zip）");
               } catch (err: any) {
                 flash("保存エラー: " + (err?.message ?? err));
@@ -187,8 +215,10 @@ export default function Home() {
         <button
           onClick={() => {
             if (confirm("すべての入力と図面を初期状態に戻します。よろしいですか？")) {
+              skipNextAutosave();
               resetDefaults();
               clearDrawings();
+              clearDraft();
               flash("初期化しました");
             }
           }}

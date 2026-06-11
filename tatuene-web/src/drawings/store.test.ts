@@ -12,6 +12,11 @@ import {
   nextNumber,
   clearSlot,
   clearAll,
+  snapshot,
+  undo,
+  redo,
+  canUndo,
+  canRedo,
   collectMeta,
   collectImages,
   restore,
@@ -124,6 +129,91 @@ describe("collectMeta / collectImages / restore", () => {
       {}
     );
     expect(nextId()).toBe("a1000");
+  });
+});
+
+describe("undo/redo", () => {
+  it("ドラッグ1回（snapshot 1回 + setTransform 多数）が undo 1回で戻る", () => {
+    putImage("s1");
+    snapshot("s1");
+    for (let i = 1; i <= 30; i++) setTransform("s1", { x: i, y: i });
+    expect(getSlot("s1").transform).toMatchObject({ x: 30, y: 30 });
+    undo();
+    expect(getSlot("s1").transform).toMatchObject({ x: 0, y: 0 });
+    redo();
+    expect(getSlot("s1").transform).toMatchObject({ x: 30, y: 30 });
+  });
+
+  it("snapshot だけで変更がなければ履歴に積まれない（空クリック対策）", () => {
+    putImage("s1");
+    expect(canUndo()).toBe(true); // setImage の分
+    undo();
+    expect(canUndo()).toBe(false);
+    snapshot("s1");
+    expect(canUndo()).toBe(false);
+  });
+
+  it("離散操作（注釈追加・削除・画像差し替え）は自動で履歴に積まれる", () => {
+    addAnnotation("s1", { id: nextId(), type: "text", x: 0, y: 0, text: "a", color: "#000", size: 16 });
+    expect(getSlot("s1").annotations).toHaveLength(1);
+    undo();
+    expect(getSlot("s1").annotations).toHaveLength(0);
+    redo();
+    expect(getSlot("s1").annotations).toHaveLength(1);
+
+    putImage("s1");
+    setImage("s1", { dataUrl: "data:image/png;base64,BBBB", name: "b.png", type: "image/png", natW: 10, natH: 10 });
+    undo();
+    expect(getSlot("s1").imageDataUrl).toBe(PNG_DATAURL);
+  });
+
+  it("新しい変更で redo スタックはクリアされる", () => {
+    putImage("s1");
+    snapshot("s1");
+    setTransform("s1", { x: 10 });
+    undo();
+    expect(canRedo()).toBe(true);
+    snapshot("s1");
+    setTransform("s1", { x: 99 });
+    expect(canRedo()).toBe(false);
+  });
+
+  it("履歴は上限50件でトリムされる", () => {
+    for (let i = 0; i < 60; i++) {
+      addAnnotation("s1", { id: nextId(), type: "number", x: i, y: i, value: i + 1, color: "#000", size: 18 });
+    }
+    let n = 0;
+    while (canUndo()) {
+      undo();
+      n++;
+    }
+    expect(n).toBe(50);
+    expect(getSlot("s1").annotations).toHaveLength(10);
+  });
+
+  it("restore / clearAll で履歴は破棄される", () => {
+    putImage("s1");
+    expect(canUndo()).toBe(true);
+    restore({}, {});
+    expect(canUndo()).toBe(false);
+    putImage("s1");
+    clearAll();
+    expect(canUndo()).toBe(false);
+    expect(canRedo()).toBe(false);
+  });
+
+  it("undo はスロット単位で正しい状態に戻す（複数スロット混在）", () => {
+    putImage("s1");
+    putImage("s2");
+    snapshot("s1");
+    setTransform("s1", { rotation: 45 });
+    snapshot("s2");
+    setTransform("s2", { rotation: -30 });
+    undo(); // s2 が戻る
+    expect(getSlot("s2").transform.rotation).toBe(0);
+    expect(getSlot("s1").transform.rotation).toBe(45);
+    undo(); // s1 が戻る
+    expect(getSlot("s1").transform.rotation).toBe(0);
   });
 });
 

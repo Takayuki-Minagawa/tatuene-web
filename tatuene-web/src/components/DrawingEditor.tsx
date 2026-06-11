@@ -32,6 +32,11 @@ import {
   clearSlot,
   nextId,
   nextNumber,
+  snapshot,
+  undo,
+  redo,
+  canUndo,
+  canRedo,
   type Annotation,
 } from "@/drawings/store";
 
@@ -198,6 +203,7 @@ export default function DrawingEditor({
     e.stopPropagation();
     const p = toLocal(e);
     svgRef.current?.setPointerCapture(e.pointerId);
+    snapshot(slot.id);
     drag.current = { mode: "image", sx: p.x, sy: p.y, ox: t.x, oy: t.y };
     setSelected(IMAGE_SELECTION);
   }
@@ -208,6 +214,7 @@ export default function DrawingEditor({
     const handle = (e.currentTarget.dataset.handle ?? "br") as Corner;
     const p = toLocal(e);
     svgRef.current?.setPointerCapture(e.pointerId);
+    snapshot(slot.id);
     drag.current = { mode: "img-scale", handle, startPt: p, startScale: t.scale, center: corners.center };
   }
 
@@ -216,6 +223,7 @@ export default function DrawingEditor({
     e.stopPropagation();
     const p = toLocal(e);
     svgRef.current?.setPointerCapture(e.pointerId);
+    snapshot(slot.id);
     drag.current = { mode: "img-rotate", startPt: p, startRotation: t.rotation, center: corners.center };
   }
 
@@ -224,6 +232,7 @@ export default function DrawingEditor({
     e.stopPropagation();
     const handle = (e.currentTarget.dataset.handle ?? "br") as Corner;
     svgRef.current?.setPointerCapture(e.pointerId);
+    snapshot(slot.id);
     drag.current = { mode: "crop", handle };
   }
 
@@ -246,12 +255,24 @@ export default function DrawingEditor({
     e.stopPropagation();
     const p = toLocal(e);
     svgRef.current?.setPointerCapture(e.pointerId);
+    snapshot(slot.id);
     setSelected(ann.id);
     drag.current = { mode: "ann", id: ann.id, sx: p.x, sy: p.y, orig: ann };
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
     if (!editable) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+      e.preventDefault();
+      redo();
+      return;
+    }
     if (selected === IMAGE_SELECTION && hasImage) {
       // 画像選択中: 矢印キーで微調整（Shiftで10px）。削除は「図面削除」ボタンに限定。
       const step = e.shiftKey ? 10 : 1;
@@ -264,6 +285,7 @@ export default function DrawingEditor({
       const m = move[e.key];
       if (m) {
         e.preventDefault();
+        snapshot(slot.id);
         setTransform(slot.id, { x: t.x + m[0], y: t.y + m[1] });
       }
       return;
@@ -277,7 +299,10 @@ export default function DrawingEditor({
 
   function editText(ann: Extract<Annotation, { type: "text" }>) {
     const txt = window.prompt("テキストを編集", ann.text);
-    if (txt !== null) updateAnnotation(slot.id, ann.id, { text: txt } as Partial<Annotation>);
+    if (txt !== null && txt !== ann.text) {
+      snapshot(slot.id);
+      updateAnnotation(slot.id, ann.id, { text: txt } as Partial<Annotation>);
+    }
   }
 
   // ---- 注釈の描画 ----
@@ -447,28 +472,67 @@ export default function DrawingEditor({
             太
             <input type="range" min={1} max={8} value={lineWidth} onChange={(e) => setLineWidth(Number(e.target.value))} />
           </label>
+          <button className="draw-btn" title="元に戻す (Ctrl+Z)" disabled={!canUndo()} onClick={undo}>
+            戻す
+          </button>
+          <button className="draw-btn" title="やり直す (Ctrl+Shift+Z / Ctrl+Y)" disabled={!canRedo()} onClick={redo}>
+            進む
+          </button>
           {hasImage && tool !== "crop" && (
             <>
               <button
                 className="draw-btn"
                 title="画像の位置・拡大率・回転を初期状態に戻す"
-                onClick={() => setTransform(slot.id, { x: 0, y: 0, scale: 1, rotation: 0 })}
+                onClick={() => {
+                  snapshot(slot.id);
+                  setTransform(slot.id, { x: 0, y: 0, scale: 1, rotation: 0 });
+                }}
               >
                 フィット
               </button>
-              <button className={"draw-btn" + (t.flipH ? " on" : "")} title="左右反転" onClick={() => setTransform(slot.id, { flipH: !t.flipH || undefined })}>
+              <button
+                className={"draw-btn" + (t.flipH ? " on" : "")}
+                title="左右反転"
+                onClick={() => {
+                  snapshot(slot.id);
+                  setTransform(slot.id, { flipH: !t.flipH || undefined });
+                }}
+              >
                 ⇄
               </button>
-              <button className={"draw-btn" + (t.flipV ? " on" : "")} title="上下反転" onClick={() => setTransform(slot.id, { flipV: !t.flipV || undefined })}>
+              <button
+                className={"draw-btn" + (t.flipV ? " on" : "")}
+                title="上下反転"
+                onClick={() => {
+                  snapshot(slot.id);
+                  setTransform(slot.id, { flipV: !t.flipV || undefined });
+                }}
+              >
                 ⇅
               </button>
               <label className="draw-range" title="透明度">
                 透
-                <input type="range" min={0.2} max={1} step={0.05} value={t.opacity ?? 1} onChange={(e) => setTransform(slot.id, { opacity: Number(e.target.value) })} />
+                <input
+                  type="range"
+                  min={0.2}
+                  max={1}
+                  step={0.05}
+                  value={t.opacity ?? 1}
+                  onPointerDown={() => snapshot(slot.id)}
+                  onChange={(e) => setTransform(slot.id, { opacity: Number(e.target.value) })}
+                />
               </label>
               <label className="draw-range" title="明るさ（薄いスキャンの補正など）">
                 明
-                <input type="range" min={0.5} max={2} step={0.05} value={brightness} onChange={(e) => setTransform(slot.id, { brightness: Number(e.target.value) })} />
+                <input
+                  type="range"
+                  min={0.5}
+                  max={2}
+                  step={0.05}
+                  value={brightness}
+                  onPointerDown={() => snapshot(slot.id)}
+                  onChange={(e) => setTransform(slot.id, { brightness: Number(e.target.value) })}
+                />
               </label>
               <button className="draw-btn" title="画像の表示範囲を切り抜く" onClick={() => setTool("crop")}>
                 切抜
@@ -484,6 +548,7 @@ export default function DrawingEditor({
                 className="draw-btn warn"
                 title="切り抜きを解除"
                 onClick={() => {
+                  snapshot(slot.id);
                   setTransform(slot.id, { crop: undefined });
                   setTool("select");
                 }}

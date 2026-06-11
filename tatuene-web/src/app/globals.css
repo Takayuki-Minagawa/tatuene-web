@@ -113,6 +113,10 @@ table.xl-grid {
   border-color: #d9a3a3;
   color: #b03030;
 }
+.draw-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 .draw-colors {
   display: inline-flex;
   gap: 3px;

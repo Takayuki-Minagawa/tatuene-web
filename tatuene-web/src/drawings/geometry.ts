@@ -60,6 +60,89 @@ export function imageCorners(
   };
 }
 
+/**
+ * フレーム座標 → 画像ローカル座標（変換前の contain フィット矩形と同じ空間）。
+ * imgTransform（flip → scale → rotate、中心基準）の逆変換。crop ハンドルのドラッグ変換用。
+ */
+export function frameToImageLocal(p: Pt, fit: FitRect, t: ImageTransform): Pt {
+  const center = imageCenter(fit, t);
+  const rad = (-t.rotation * Math.PI) / 180;
+  const cos = Math.cos(rad),
+    sin = Math.sin(rad);
+  const dx = p.x - center.x,
+    dy = p.y - center.y;
+  let rx = (dx * cos - dy * sin) / t.scale;
+  let ry = (dx * sin + dy * cos) / t.scale;
+  if (t.flipH) rx = -rx;
+  if (t.flipV) ry = -ry;
+  return { x: center.x + rx, y: center.y + ry };
+}
+
+/** 画像ローカル座標 → フレーム座標（frameToImageLocal の逆） */
+export function imageLocalToFrame(p: Pt, fit: FitRect, t: ImageTransform): Pt {
+  const center = imageCenter(fit, t);
+  let dx = p.x - center.x,
+    dy = p.y - center.y;
+  if (t.flipH) dx = -dx;
+  if (t.flipV) dy = -dy;
+  dx *= t.scale;
+  dy *= t.scale;
+  const rad = (t.rotation * Math.PI) / 180;
+  const cos = Math.cos(rad),
+    sin = Math.sin(rad);
+  return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos };
+}
+
+export interface CropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export const FULL_CROP: CropRect = { x: 0, y: 0, w: 1, h: 1 };
+export const MIN_CROP = 0.05;
+
+/** crop 割合（フィット矩形基準）を画像ローカル座標の矩形へ変換 */
+export function cropToLocalRect(crop: CropRect, fit: FitRect, t: ImageTransform): FitRect {
+  const left = fit.x + t.x,
+    top = fit.y + t.y;
+  return {
+    x: left + crop.x * fit.w,
+    y: top + crop.y * fit.h,
+    w: crop.w * fit.w,
+    h: crop.h * fit.h,
+  };
+}
+
+/**
+ * crop の1隅をドラッグしたときの新しい crop 割合。
+ * 対角の隅を固定し、最小サイズ MIN_CROP・範囲 0..1 にクランプする。
+ */
+export function cropFromHandleDrag(
+  crop: CropRect,
+  handle: "tl" | "tr" | "br" | "bl",
+  localPt: Pt,
+  fit: FitRect,
+  t: ImageTransform
+): CropRect {
+  const fx = Math.min(1, Math.max(0, (localPt.x - (fit.x + t.x)) / fit.w));
+  const fy = Math.min(1, Math.max(0, (localPt.y - (fit.y + t.y)) / fit.h));
+  let x1 = crop.x,
+    y1 = crop.y,
+    x2 = crop.x + crop.w,
+    y2 = crop.y + crop.h;
+  if (handle === "tl" || handle === "bl") x1 = Math.min(fx, x2 - MIN_CROP);
+  else x2 = Math.max(fx, x1 + MIN_CROP);
+  if (handle === "tl" || handle === "tr") y1 = Math.min(fy, y2 - MIN_CROP);
+  else y2 = Math.max(fy, y1 + MIN_CROP);
+  x1 = Math.max(0, x1);
+  y1 = Math.max(0, y1);
+  x2 = Math.min(1, x2);
+  y2 = Math.min(1, y2);
+  return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+}
+
 /** コーナーハンドルのドラッグから新しい scale を求める（中心からの距離比） */
 export function scaleFromHandleDrag(center: Pt, startPt: Pt, curPt: Pt, startScale: number): number {
   const d0 = Math.hypot(startPt.x - center.x, startPt.y - center.y);

@@ -90,6 +90,21 @@ describe("collectMeta / collectImages / restore", () => {
     expect(collectMeta()).toEqual({});
   });
 
+  it("拡張フィールド（反転・透明度・crop）も往復で保持される", () => {
+    putImage("s1");
+    setTransform("s1", { flipH: true, opacity: 0.7, brightness: 1.4, crop: { x: 0.1, y: 0.1, w: 0.8, h: 0.8 } });
+    const meta = collectMeta();
+    const images = collectImages();
+    clearAll();
+    restore(JSON.parse(JSON.stringify(meta)), images);
+    expect(getSlot("s1").transform).toMatchObject({
+      flipH: true,
+      opacity: 0.7,
+      brightness: 1.4,
+      crop: { x: 0.1, y: 0.1, w: 0.8, h: 0.8 },
+    });
+  });
+
   it("transform を欠いた旧メタは既定値で復元される", () => {
     restore(
       { s1: { annotations: [] } as unknown as Parameters<typeof restore>[0][string] },

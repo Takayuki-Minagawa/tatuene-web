@@ -21,6 +21,12 @@ export interface ImageTransform {
   y: number;
   scale: number; // 拡大縮小(1=原寸フィット)
   rotation: number; // 回転(度)
+  // 以下は後方互換のため全てオプショナル（旧保存ファイルには存在しない）
+  flipH?: boolean; // 左右反転
+  flipV?: boolean; // 上下反転
+  opacity?: number; // 0..1（既定1）
+  brightness?: number; // 0.5..2（既定1）
+  crop?: { x: number; y: number; w: number; h: number }; // フィット矩形に対する割合（既定=全体）
 }
 
 export interface SlotState {
@@ -172,7 +178,7 @@ export function restore(meta: Record<string, SlotMeta>, images: Record<string, s
       imageType: m.imageType,
       natW: m.natW,
       natH: m.natH,
-      transform: m.transform ?? { ...DEFAULT_TRANSFORM },
+      transform: { ...DEFAULT_TRANSFORM, ...(m.transform ?? {}) },
       annotations,
     });
   }

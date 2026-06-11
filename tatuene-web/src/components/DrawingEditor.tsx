@@ -14,6 +14,11 @@ import {
   imageCorners,
   scaleFromHandleDrag,
   rotationFromHandleDrag,
+  frameToImageLocal,
+  imageLocalToFrame,
+  cropToLocalRect,
+  cropFromHandleDrag,
+  FULL_CROP,
   type Pt,
 } from "@/drawings/geometry";
 import {
@@ -30,7 +35,7 @@ import {
   type Annotation,
 } from "@/drawings/store";
 
-type Tool = "select" | "line" | "arrow" | "number" | "text";
+type Tool = "select" | "line" | "arrow" | "number" | "text" | "crop";
 
 const COLORS = ["#d32f2f", "#1565c0", "#000000", "#2e7d32", "#f9a825"];
 
@@ -66,6 +71,7 @@ export default function DrawingEditor({
     | { mode: "draw"; sx: number; sy: number }
     | { mode: "img-scale"; handle: Corner; startPt: Pt; startScale: number; center: Pt }
     | { mode: "img-rotate"; startPt: Pt; startRotation: number; center: Pt }
+    | { mode: "crop"; handle: Corner }
   >(null);
 
   const fit = fitContain(state.natW ?? 0, state.natH ?? 0, width, height);
@@ -74,8 +80,15 @@ export default function DrawingEditor({
   const imgY = fit.y + t.y;
   const cx = imgX + fit.w / 2;
   const cy = imgY + fit.h / 2;
-  const imgTransform = `rotate(${t.rotation} ${cx} ${cy}) translate(${cx} ${cy}) scale(${t.scale}) translate(${-cx} ${-cy})`;
+  // 適用順（右から）: flip → scale → rotate（いずれも画像中心基準）
+  const flipPart =
+    t.flipH || t.flipV ? ` translate(${cx} ${cy}) scale(${t.flipH ? -1 : 1} ${t.flipV ? -1 : 1}) translate(${-cx} ${-cy})` : "";
+  const imgTransform = `rotate(${t.rotation} ${cx} ${cy}) translate(${cx} ${cy}) scale(${t.scale}) translate(${-cx} ${-cy})${flipPart}`;
   const corners = imageCorners(fit, t);
+  const crop = t.crop ?? FULL_CROP;
+  const hasCrop = !!t.crop;
+  const cropRect = cropToLocalRect(crop, fit, t);
+  const brightness = t.brightness ?? 1;
 
   function toLocal(e: React.PointerEvent): { x: number; y: number } {
     const svg = svgRef.current!;
@@ -134,7 +147,7 @@ export default function DrawingEditor({
     } else if (tool === "text") {
       const txt = window.prompt("テキストを入力", "");
       if (txt) addAnnotation(slot.id, { id: nextId(), type: "text", x: p.x, y: p.y, text: txt, color, size: 16 });
-    } else {
+    } else if (tool === "select") {
       // 選択ツール: 空白クリックで選択解除（図形は各自stopPropagation）
       setSelected(null);
     }
@@ -152,6 +165,9 @@ export default function DrawingEditor({
       setTransform(slot.id, { scale: scaleFromHandleDrag(d.center, d.startPt, p, d.startScale) });
     } else if (d.mode === "img-rotate") {
       setTransform(slot.id, { rotation: rotationFromHandleDrag(d.center, d.startPt, p, d.startRotation, e.shiftKey) });
+    } else if (d.mode === "crop") {
+      const local = frameToImageLocal(p, fit, t);
+      setTransform(slot.id, { crop: cropFromHandleDrag(crop, d.handle, local, fit, t) });
     } else if (d.mode === "ann") {
       const dx = p.x - d.sx,
         dy = p.y - d.sy;
@@ -201,6 +217,23 @@ export default function DrawingEditor({
     const p = toLocal(e);
     svgRef.current?.setPointerCapture(e.pointerId);
     drag.current = { mode: "img-rotate", startPt: p, startRotation: t.rotation, center: corners.center };
+  }
+
+  function onCropHandleDown(e: React.PointerEvent<SVGGElement>) {
+    if (!editable) return;
+    e.stopPropagation();
+    const handle = (e.currentTarget.dataset.handle ?? "br") as Corner;
+    svgRef.current?.setPointerCapture(e.pointerId);
+    drag.current = { mode: "crop", handle };
+  }
+
+  /** 切り抜きモードを終了。ほぼ全面のままなら crop なし扱いに戻す。 */
+  function finishCrop() {
+    const c = t.crop;
+    if (c && c.x < 0.005 && c.y < 0.005 && c.w > 0.99 && c.h > 0.99) {
+      setTransform(slot.id, { crop: undefined });
+    }
+    setTool("select");
   }
 
   function cancelDrag() {
@@ -295,6 +328,42 @@ export default function DrawingEditor({
     );
   }
 
+  // ---- 切り抜き編集オーバーレイ（crop ツール時のみ） ----
+  function renderCropOverlay() {
+    const cr = cropRect;
+    const right = imgX + fit.w,
+      bottom = imgY + fit.h;
+    const dim = "rgba(0,0,0,0.45)";
+    const handlePts: [Corner, Pt][] = [
+      ["tl", { x: cr.x, y: cr.y }],
+      ["tr", { x: cr.x + cr.w, y: cr.y }],
+      ["br", { x: cr.x + cr.w, y: cr.y + cr.h }],
+      ["bl", { x: cr.x, y: cr.y + cr.h }],
+    ];
+    return (
+      <g>
+        {/* 暗転と枠線は画像と一緒に回転・拡縮させる */}
+        <g transform={imgTransform} style={{ pointerEvents: "none" }}>
+          <rect x={imgX} y={imgY} width={fit.w} height={Math.max(0, cr.y - imgY)} fill={dim} />
+          <rect x={imgX} y={cr.y} width={Math.max(0, cr.x - imgX)} height={cr.h} fill={dim} />
+          <rect x={cr.x + cr.w} y={cr.y} width={Math.max(0, right - cr.x - cr.w)} height={cr.h} fill={dim} />
+          <rect x={imgX} y={cr.y + cr.h} width={fit.w} height={Math.max(0, bottom - cr.y - cr.h)} fill={dim} />
+          <rect x={cr.x} y={cr.y} width={cr.w} height={cr.h} fill="none" stroke="#fff" strokeWidth={1.5} strokeDasharray="6 4" />
+        </g>
+        {/* ハンドルは画面上で一定サイズになるようフレーム座標へ写像して描く */}
+        {handlePts.map(([k, pt]) => {
+          const fp = imageLocalToFrame(pt, fit, t);
+          return (
+            <g key={k} data-handle={k} onPointerDown={onCropHandleDown} style={{ cursor: "crosshair" }}>
+              <rect x={fp.x - 12} y={fp.y - 12} width={24} height={24} fill="transparent" />
+              <rect x={fp.x - 5} y={fp.y - 5} width={10} height={10} fill="#fff" stroke="#e65100" strokeWidth={1.5} style={{ pointerEvents: "none" }} />
+            </g>
+          );
+        })}
+      </g>
+    );
+  }
+
   // ---- 画像選択時のバウンディングボックスと操作ハンドル（PDF側 editable=false では呼ばれない） ----
   function renderImageHandles() {
     const { tl, tr, br, bl, center } = corners;
@@ -378,14 +447,50 @@ export default function DrawingEditor({
             太
             <input type="range" min={1} max={8} value={lineWidth} onChange={(e) => setLineWidth(Number(e.target.value))} />
           </label>
-          {hasImage && (
-            <button
-              className="draw-btn"
-              title="画像の位置・拡大率・回転を初期状態に戻す"
-              onClick={() => setTransform(slot.id, { x: 0, y: 0, scale: 1, rotation: 0 })}
-            >
-              フィット
-            </button>
+          {hasImage && tool !== "crop" && (
+            <>
+              <button
+                className="draw-btn"
+                title="画像の位置・拡大率・回転を初期状態に戻す"
+                onClick={() => setTransform(slot.id, { x: 0, y: 0, scale: 1, rotation: 0 })}
+              >
+                フィット
+              </button>
+              <button className={"draw-btn" + (t.flipH ? " on" : "")} title="左右反転" onClick={() => setTransform(slot.id, { flipH: !t.flipH || undefined })}>
+                ⇄
+              </button>
+              <button className={"draw-btn" + (t.flipV ? " on" : "")} title="上下反転" onClick={() => setTransform(slot.id, { flipV: !t.flipV || undefined })}>
+                ⇅
+              </button>
+              <label className="draw-range" title="透明度">
+                透
+                <input type="range" min={0.2} max={1} step={0.05} value={t.opacity ?? 1} onChange={(e) => setTransform(slot.id, { opacity: Number(e.target.value) })} />
+              </label>
+              <label className="draw-range" title="明るさ（薄いスキャンの補正など）">
+                明
+                <input type="range" min={0.5} max={2} step={0.05} value={brightness} onChange={(e) => setTransform(slot.id, { brightness: Number(e.target.value) })} />
+              </label>
+              <button className="draw-btn" title="画像の表示範囲を切り抜く" onClick={() => setTool("crop")}>
+                切抜
+              </button>
+            </>
+          )}
+          {hasImage && tool === "crop" && (
+            <>
+              <button className="draw-btn on" title="切り抜きを確定" onClick={finishCrop}>
+                確定
+              </button>
+              <button
+                className="draw-btn warn"
+                title="切り抜きを解除"
+                onClick={() => {
+                  setTransform(slot.id, { crop: undefined });
+                  setTool("select");
+                }}
+              >
+                解除
+              </button>
+            </>
           )}
           {selected && selected !== IMAGE_SELECTION && (
             <button className="draw-btn warn" onClick={() => { removeAnnotation(slot.id, selected); setSelected(null); }}>
@@ -421,21 +526,44 @@ export default function DrawingEditor({
         }}
       >
         {hasImage && (
-          <image
-            href={state.imageDataUrl}
-            x={imgX}
-            y={imgY}
-            width={fit.w}
-            height={fit.h}
-            transform={imgTransform}
-            preserveAspectRatio="none"
-            onPointerDown={onImagePointerDown}
-            style={{ cursor: editable && tool === "select" ? "move" : "inherit", pointerEvents: editable ? "auto" : "none" }}
-          />
+          <g transform={imgTransform}>
+            <defs>
+              {brightness !== 1 && (
+                <filter id={`br-${slot.id}`}>
+                  <feComponentTransfer>
+                    <feFuncR type="linear" slope={brightness} />
+                    <feFuncG type="linear" slope={brightness} />
+                    <feFuncB type="linear" slope={brightness} />
+                  </feComponentTransfer>
+                </filter>
+              )}
+              {hasCrop && (
+                <clipPath id={`crop-${slot.id}`}>
+                  <rect x={cropRect.x} y={cropRect.y} width={cropRect.w} height={cropRect.h} />
+                </clipPath>
+              )}
+            </defs>
+            {/* 切り抜き編集中は全体を見せるため clip を外す（外側は暗転表示） */}
+            <g clipPath={hasCrop && tool !== "crop" ? `url(#crop-${slot.id})` : undefined}>
+              <image
+                href={state.imageDataUrl}
+                x={imgX}
+                y={imgY}
+                width={fit.w}
+                height={fit.h}
+                preserveAspectRatio="none"
+                opacity={t.opacity ?? 1}
+                filter={brightness !== 1 ? `url(#br-${slot.id})` : undefined}
+                onPointerDown={onImagePointerDown}
+                style={{ cursor: editable && tool === "select" ? "move" : "inherit", pointerEvents: editable ? "auto" : "none" }}
+              />
+            </g>
+          </g>
         )}
         {state.annotations.map(renderAnn)}
         {draft && renderAnn(draft)}
-        {editable && hasImage && selected === IMAGE_SELECTION && renderImageHandles()}
+        {editable && hasImage && selected === IMAGE_SELECTION && tool !== "crop" && renderImageHandles()}
+        {editable && hasImage && tool === "crop" && renderCropOverlay()}
         {editable && !hasImage && (
           <>
             <text x={width / 2} y={height / 2 - 10} textAnchor="middle" dominantBaseline="central" fill="#9aa6bd" fontSize={13} style={{ pointerEvents: "none", userSelect: "none" }}>

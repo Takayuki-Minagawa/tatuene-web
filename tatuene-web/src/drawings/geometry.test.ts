@@ -5,6 +5,12 @@ import {
   scaleFromHandleDrag,
   rotationFromHandleDrag,
   normalizeAngle,
+  frameToImageLocal,
+  imageLocalToFrame,
+  cropToLocalRect,
+  cropFromHandleDrag,
+  FULL_CROP,
+  MIN_CROP,
   MIN_SCALE,
   MAX_SCALE,
 } from "./geometry";
@@ -83,6 +89,51 @@ describe("rotationFromHandleDrag", () => {
   });
   it("0/±90/180 の近傍は吸着する", () => {
     expect(rotationFromHandleDrag(center, { x: 0, y: -10 }, { x: 0.3, y: -10 }, 0)).toBe(0);
+  });
+});
+
+describe("frameToImageLocal / imageLocalToFrame", () => {
+  const fit = { x: 10, y: 20, w: 100, h: 50 };
+
+  it("回転・拡縮・反転込みで往復が一致する", () => {
+    const t = { x: 7, y: -4, scale: 1.6, rotation: 33, flipH: true, flipV: false };
+    const p = { x: 42, y: 31 };
+    const back = imageLocalToFrame(frameToImageLocal(p, fit, t), fit, t);
+    expect(back.x).toBeCloseTo(p.x);
+    expect(back.y).toBeCloseTo(p.y);
+  });
+
+  it("無変換なら恒等写像", () => {
+    const t = { x: 0, y: 0, scale: 1, rotation: 0 };
+    expect(frameToImageLocal({ x: 33, y: 44 }, fit, t)).toEqual({ x: 33, y: 44 });
+  });
+});
+
+describe("crop", () => {
+  const fit = { x: 10, y: 20, w: 100, h: 50 };
+  const T = { x: 0, y: 0, scale: 1, rotation: 0 };
+
+  it("cropToLocalRect は割合をローカル矩形へ写像する", () => {
+    expect(cropToLocalRect({ x: 0.1, y: 0.2, w: 0.5, h: 0.6 }, fit, T)).toEqual({ x: 20, y: 30, w: 50, h: 30 });
+    expect(cropToLocalRect(FULL_CROP, fit, T)).toEqual({ x: 10, y: 20, w: 100, h: 50 });
+  });
+
+  it("ハンドルドラッグで対角を固定して更新する", () => {
+    // br を画像中央へ → 右下半分が縮む
+    const c = cropFromHandleDrag(FULL_CROP, "br", { x: 60, y: 45 }, fit, T);
+    expect(c.x).toBe(0);
+    expect(c.y).toBe(0);
+    expect(c.w).toBeCloseTo(0.5);
+    expect(c.h).toBeCloseTo(0.5);
+  });
+
+  it("最小サイズと範囲 0..1 にクランプされる", () => {
+    const c = cropFromHandleDrag(FULL_CROP, "br", { x: -100, y: -100 }, fit, T);
+    expect(c.w).toBeCloseTo(MIN_CROP);
+    expect(c.h).toBeCloseTo(MIN_CROP);
+    const c2 = cropFromHandleDrag(FULL_CROP, "tl", { x: 9999, y: 9999 }, fit, T);
+    expect(c2.x + c2.w).toBeLessThanOrEqual(1);
+    expect(c2.w).toBeCloseTo(MIN_CROP);
   });
 });
 

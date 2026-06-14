@@ -91,6 +91,28 @@ export const SHEET_LAYOUTS: Record<string, SheetLayout> = {
       },
     ],
   },
+
+  [SHEETS.materials]: {
+    sections: [
+      {
+        id: "materials-note",
+        title: "入力について",
+        defaultOpen: false,
+        // ◇部材性能シートの入力について（B2〜B8）
+        guidanceRows: [2, 8],
+        guidanceCol: 1,
+      },
+      {
+        id: "materials-table",
+        title: "断熱材の性能（建材データ）",
+        defaultOpen: true,
+        guidance:
+          "建材の性能データです。性能値は「A：熱伝導率＋厚み」または「B：熱貫流率(U)」のどちらかで入力します（両方入れた場合はBが優先）。計算シートには熱抵抗値(R)が反映されます。変更後は計算シートの建材を選び直してください。",
+        // 見出し（10〜11行）＋データ（12〜170行）、列 B〜G を表で表示。
+        reftable: { fromRow: 9, toRow: 169, fromCol: 1, toCol: 6 },
+      },
+    ],
+  },
 };
 
 export function getSheetLayout(sheetName: string): SheetLayout | undefined {

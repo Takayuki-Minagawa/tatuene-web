@@ -26,10 +26,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        # Next.js アプリはサブディレクトリにある
-        working-directory: tatuene-web
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,7 +35,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: tatuene-web/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Setup Pages
         id: pages
@@ -58,7 +54,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # next.config.ts の output: "export" は out/ に出力する
-          path: tatuene-web/out
+          path: out
 
   deploy:
     needs: build

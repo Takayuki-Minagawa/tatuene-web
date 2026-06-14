@@ -355,6 +355,10 @@ table.xl-grid {
 .plan-draw-frame {
   position: relative;
   margin: 0 auto;
+  /* 図面を貼る「用紙」。白地＋枠線＋淡い影で、背景の表と切り離して見せる。 */
+  background: #fff;
+  border: 1px solid #d6dbe4;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 /* 参照表（材料グリッド・部材性能） */
@@ -381,22 +385,37 @@ table.xl-grid {
 }
 .reftable {
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
   /* デバイス幅に応じて伸縮: 余白があればセルを横長に広げ(width:100%)、
      収まらなければ内容幅を保ってスクロール(min-width:max-content)。
      列ごとの幅は内容/colgroup に応じて変わってよい（table-layout:auto）。 */
+  /* 列幅は colgroup を厳守（table-layout:fixed）。テキストは折り返して
+     横スクロールを抑える。画面が広ければ width:100% で気持ちよく広がる。 */
   width: 100%;
-  min-width: max-content;
-  table-layout: auto;
+  table-layout: fixed;
 }
 .reftable-cell {
   border: 1px solid #d4d9de;
-  padding: 4px 6px;
-  white-space: nowrap;
+  padding: 2px 4px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   vertical-align: middle;
 }
 .reftable-cell.is-input {
   padding: 0;
-  min-width: 96px;
+}
+/* 参照表内の入力欄は控えめなサイズに（横長を抑える）。
+   box-sizing でセル幅にぴったり収め（はみ出し＝横スクロールの一因を解消）、
+   select は min-width:0 で細い列でも縮んで収まるようにする。 */
+.reftable-cell.is-input .cell-edit,
+.reftable-cell.is-input .cell-select {
+  box-sizing: border-box;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+.reftable-cell.is-input .cell-select {
+  min-width: 0;
+  max-width: 100%;
 }
 

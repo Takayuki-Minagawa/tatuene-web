@@ -25,12 +25,28 @@ export default function RefTable({ sheet, region }: { sheet: string; region: Ref
   const cols: number[] = [];
   for (let c = region.fromCol; c <= region.toCol; c++) cols.push(c);
 
+  // 横長対策: 内容も入力も無い「空の区切り列」は極小幅に潰し、
+  // データのある列も上限でクランプして全体幅を抑える（横スクロールを減らす）。
+  const EMPTY_W = 5;
+  const MAX_W = 160;
+  const colEmpty = cols.map((c) =>
+    rows.every((r) => {
+      const key = `${r},${c}`;
+      if (covered.has(key) || anchors.has(key)) return false; // 結合に関与＝内容あり
+      if (inputSet.has(addrOf(r, c))) return false;
+      const raw = model.data[r]?.[c];
+      return raw === null || raw === undefined || raw === "";
+    }),
+  );
+  const colWidth = (c: number, idx: number) =>
+    colEmpty[idx] ? EMPTY_W : Math.min(widthPx(model.colWidths[colName(c)]), MAX_W);
+
   return (
     <div className="reftable-scroll">
       <table className="reftable">
         <colgroup>
-          {cols.map((c) => (
-            <col key={c} style={{ width: widthPx(model.colWidths[colName(c)]) }} />
+          {cols.map((c, idx) => (
+            <col key={c} style={{ width: colWidth(c, idx) }} />
           ))}
         </colgroup>
         <tbody>

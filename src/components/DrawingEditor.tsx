@@ -209,6 +209,9 @@ export default function DrawingEditor({
           cursor: tool === "select" ? "default" : "crosshair",
         }}
       >
+        {/* 不透明な「用紙」背景。これがないと透明SVG越しに下のグリッド表が透け、
+            図の挿入・編集が見えにくい。編集枠・評価シートのコピー・PDFすべてに効く。 */}
+        <rect x={0} y={0} width={width} height={height} fill="#ffffff" style={{ pointerEvents: "none" }} />
         {hasImage && state.imageDataUrl && (
           <ImageLayer
             slotId={slot.id}

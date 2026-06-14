@@ -42,6 +42,7 @@ export default function Manual({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="manual-title"
+        tabIndex={-1}
         className="bg-white rounded-lg shadow-2xl w-[760px] max-w-[94vw] max-h-[88vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}

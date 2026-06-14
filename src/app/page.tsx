@@ -300,7 +300,7 @@ export default function Home() {
           </button>
         </div>
         {/* 表示倍率（縮小・拡大・全体表示・標準に戻す） */}
-        <div className="flex items-center gap-1 self-center pr-1 text-xs text-slate-600">
+        <div role="group" aria-label="表示倍率" className="flex items-center gap-1 self-center pr-1 text-xs text-slate-600">
           <button
             onClick={() => zoomBy(-0.1)}
             disabled={scale <= MIN_SCALE}
@@ -391,6 +391,8 @@ export default function Home() {
       {/* トースト */}
       {msg && (
         <div
+          role="status"
+          aria-live="polite"
           className="fixed bottom-4 right-4 px-4 py-2 rounded-md shadow-lg text-sm"
           style={{ background: "#222", color: "#fff" }}
         >

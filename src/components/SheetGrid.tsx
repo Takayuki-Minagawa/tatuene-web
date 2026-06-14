@@ -121,6 +121,7 @@ function SheetGrid({
         className={"xl-grid" + (faithful ? " faithful" : "") + (hasOverlays ? " with-images" : "")}
         style={{ width: "max-content" }}
       >
+        <caption className="sr-only">{sheetName}</caption>
         <colgroup>
           {colPx.map((w, i) => (
             <col key={i} style={{ width: w }} />
@@ -167,8 +168,28 @@ function SheetGrid({
 
                 let content: React.ReactNode = null;
                 if (isInput) {
+                  // 数値セル判定（decimalキーパッド用）と、SR向けラベル（同じ行で左隣の見出し文字）
+                  const fmt = st?.fmt;
+                  const numeric =
+                    typeof raw === "number" ||
+                    (!!fmt && fmt !== "@" && fmt !== "General" && /[0#]/.test(fmt));
+                  let label = addr;
+                  for (let cc = c - 1; cc >= 0; cc--) {
+                    const t = model.data[r]?.[cc];
+                    if (typeof t === "string" && t.trim() && !t.startsWith("=")) {
+                      label = t.trim();
+                      break;
+                    }
+                  }
                   content = (
-                    <CellInput sheet={sheetName} addr={addr} isDropdown={isDropdown} align={align} />
+                    <CellInput
+                      sheet={sheetName}
+                      addr={addr}
+                      isDropdown={isDropdown}
+                      align={align}
+                      numeric={numeric}
+                      label={label}
+                    />
                   );
                 } else if (isFormula) {
                   content = <FormulaCell sheet={sheetName} addr={addr} />;

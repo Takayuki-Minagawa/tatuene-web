@@ -44,9 +44,11 @@ export interface FormSection {
   defaultOpen: boolean;
   /** セクションの解説（自動＝注記由来 or 設定）。 */
   guidance?: string;
-  kind: "fields" | "reftable";
+  kind: "fields" | "reftable" | "drawing";
   items: FormItem[];
   reftable?: RefTableRegion;
+  /** kind==="drawing" のとき、表示する図面スロットID（評価シートと共有）。 */
+  drawingSlotId?: string;
 }
 
 export interface FormSheet {
@@ -141,6 +143,33 @@ export function parseSheet(
   const sections: FormSection[] = [];
 
   for (const sec of layout?.sections ?? []) {
+    // 図面セクション: 表ではなく図面エディタを表示。reftable 領域内の入力（元の
+    // セル作図グリッド）は割当済み扱いにし、フォーム項目・その他へ出さない。
+    if (sec.drawingSlotId) {
+      if (sec.reftable) {
+        for (const i of renderableInputs) {
+          if (
+            i.row >= sec.reftable.fromRow &&
+            i.row <= sec.reftable.toRow &&
+            i.col >= sec.reftable.fromCol &&
+            i.col <= sec.reftable.toCol
+          ) {
+            assigned.add(i.addr);
+          }
+        }
+      }
+      sections.push({
+        id: sec.id,
+        title: sec.title,
+        defaultOpen: sec.defaultOpen ?? true,
+        guidance: resolveGuidance(sec, data),
+        kind: "drawing",
+        items: [],
+        drawingSlotId: sec.drawingSlotId,
+      });
+      continue;
+    }
+
     if (sec.reftable) {
       sections.push({
         id: sec.id,

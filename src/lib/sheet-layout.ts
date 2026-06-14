@@ -40,6 +40,10 @@ export interface SectionConfig {
   guidanceCol?: number;
   /** 参照表として描画する領域（0始まり・含む）。fields ではなく表で表示。 */
   reftable?: { fromRow: number; toRow: number; fromCol: number; toCol: number };
+  /** 図面スロットID。指定するとセル表ではなく図面エディタ（評価シートと同じ
+      挿入・注釈・編集）を表示する。reftable はカバレッジ抑止（作図セルをフォーム
+      項目に出さない）に流用する。 */
+  drawingSlotId?: string;
 }
 
 export interface SheetLayout {
@@ -141,8 +145,8 @@ function calcSections(variant: "現状" | "改修後"): SectionConfig[] {
         guidanceCol: 8, // I列の「◇記入上の注意」
       },
       sec("openings", "開口部（窓・外部ドア・室内ドア）", 18, 40, C, false),
-      sec("plan", "間取り図", 41, 65, C, false,
-        "セルに色や記号を入れて間取りを描くための作図エリアです。"),
+      planSec("plan", "間取り図（現状図）", 41, 65, C, "slot1",
+        "間取り図の画像を取り込み（「画像」ボタン／ドラッグ&ドロップ／Ctrl+V）、矢印・丸数字・文字で注釈できます。ここで作図した図はそのまま評価シートの「現状図」に反映されます。"),
       sec("walls", "壁部からの熱損失計算", 66, 123, C, false),
       sec("roof", "屋根からの熱損失計算", 124, 146, C, false),
       sec("ceiling", "天井からの熱損失計算", 147, 168, C, false),
@@ -155,8 +159,8 @@ function calcSections(variant: "現状" | "改修後"): SectionConfig[] {
   return [
     sec("basic", "基本データ・断熱改修面積・開口部", 9, 40, C, true,
       "白いセルに入力します。断熱改修する部位の面積を【断熱改修面積】に記入してください（面積が空欄だと建材を選んでも計算に反映されません）。"),
-    sec("plan", "間取り図・改修部分図", 41, 64, C, false,
-      "セルに色や記号を入れて間取り・改修部分を描くための作図エリアです。"),
+    planSec("plan", "間取り図・改修部分図（改修図）", 41, 64, C, "slot2",
+      "間取り・改修部分の図を取り込み、矢印・丸数字・文字で注釈できます。ここで作図した図はそのまま評価シートの「改修図」に反映されます。"),
     sec("walls", "壁部からの熱損失計算", 65, 156, C, false),
     sec("roof", "屋根からの熱損失計算", 157, 181, C, false),
     sec("ceiling", "天井からの熱損失計算", 182, 205, C, false),
@@ -182,6 +186,27 @@ function sec(
     defaultOpen,
     guidance,
     // reftable は 0始まり・含む。行範囲は 1始まりで受け取り変換。
+    reftable: { fromRow: fromRow - 1, toRow: toRow - 1, fromCol: 0, toCol },
+  };
+}
+
+/** 間取り図セクション（図面エディタ）。reftable 領域は元のセル作図グリッドを
+ *  フォーム項目から除外する（カバレッジ抑止）目的で保持する。 */
+function planSec(
+  id: string,
+  title: string,
+  fromRow: number,
+  toRow: number,
+  toCol: number,
+  drawingSlotId: string,
+  guidance?: string,
+): SectionConfig {
+  return {
+    id,
+    title,
+    defaultOpen: false,
+    guidance,
+    drawingSlotId,
     reftable: { fromRow: fromRow - 1, toRow: toRow - 1, fromCol: 0, toCol },
   };
 }

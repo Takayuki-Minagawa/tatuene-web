@@ -343,6 +343,20 @@ table.xl-grid {
   padding: 8px 10px;
 }
 
+/* 間取り図（図面エディタ）セクション */
+.form-section.is-drawing {
+  max-width: 100%;
+}
+.plan-draw-wrap {
+  /* ツールバー(枠上端 -32px)の余白を確保。狭い画面では横スクロール。 */
+  overflow-x: auto;
+  padding: 44px 12px 16px;
+}
+.plan-draw-frame {
+  position: relative;
+  margin: 0 auto;
+}
+
 /* 参照表（材料グリッド・部材性能） */
 .reftable-scroll {
   overflow-x: auto;

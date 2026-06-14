@@ -44,6 +44,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # 品質ゲート: いずれか失敗するとビルド job が落ち、deploy(needs: build)も実行されない
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test (fidelity + unit)
+        run: npm test
+
       - name: Build (static export)
         # configure-pages が解決した base_path を Next.js に渡す
         env:

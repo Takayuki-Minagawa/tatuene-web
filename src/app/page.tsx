@@ -109,7 +109,9 @@ export default function Home() {
           if (vs) setVersionSettings(vs);
           flash("前回の編集を復元しました");
         } catch (err) {
-          flash("復元に失敗しました: " + (err instanceof Error ? err.message : String(err)));
+          // 壊れたドラフトは破棄する。残すと次回起動でも同じ復元で失敗し続けるため。
+          clearDraft();
+          flash("復元に失敗したため、残っていた編集データを破棄しました: " + (err instanceof Error ? err.message : String(err)));
         }
       } else {
         clearDraft();

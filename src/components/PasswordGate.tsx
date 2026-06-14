@@ -31,9 +31,12 @@ export default function PasswordGate({
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
 
-  // 同一セッション内で一度解除したら再入力を省く（タブを閉じると再ロック）
+  // 同一セッション内で一度解除したら再入力を省く（タブを閉じると再ロック）。
+  // SSRプリレンダは必ず unlocked=false なので、sessionStorage の読込は
+  // ハイドレーション整合のためマウント後の一回限りに限定する（意図的な effect 内 setState）。
   useEffect(() => {
     if (sessionStorage.getItem(STORAGE_KEY) === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUnlocked(true);
     }
   }, []);

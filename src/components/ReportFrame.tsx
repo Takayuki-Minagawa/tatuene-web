@@ -3,16 +3,11 @@
 import React from "react";
 import SheetGrid from "./SheetGrid";
 import { engine } from "@/engine/store";
-import { DEFAULT_VERSION_SETTINGS, type VersionSettings } from "@/lib/version";
 import { SHEETS } from "@/lib/sheets";
 
 export const REPORT_FRAME_ID = "report-frame";
 
-export default function ReportFrame({
-  versionSettings = DEFAULT_VERSION_SETTINGS,
-}: {
-  versionSettings?: VersionSettings;
-}) {
+export default function ReportFrame() {
   const model = engine().model.sheets[SHEETS.evaluation];
   return (
     <div
@@ -27,7 +22,7 @@ export default function ReportFrame({
       }}
       aria-hidden
     >
-      <SheetGrid sheetName={SHEETS.evaluation} model={model} faithful versionSettings={versionSettings} />
+      <SheetGrid sheetName={SHEETS.evaluation} model={model} faithful />
     </div>
   );
 }

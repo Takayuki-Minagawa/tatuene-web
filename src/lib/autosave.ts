@@ -10,7 +10,6 @@ import { useEffect, useRef } from "react";
 import { useEngineVersion } from "@/engine/store";
 import { useDrawingsVersion, collectImages } from "@/drawings/store";
 import { buildSaveFile, type SaveFile } from "@/lib/storage";
-import type { VersionSettings } from "@/lib/version";
 
 const DRAFT_KEY = "tatuene-draft:v1";
 const DB_NAME = "tatuene-draft";
@@ -54,10 +53,10 @@ export interface Draft {
   images: Record<string, string>;
 }
 
-export async function saveDraft(versionSettings?: VersionSettings): Promise<void> {
+export async function saveDraft(): Promise<void> {
   let data: SaveFile;
   try {
-    data = buildSaveFile(versionSettings);
+    data = buildSaveFile();
     localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
   } catch {
     return; // プライベートモード等。自動保存は黙って諦める
@@ -117,7 +116,7 @@ export function skipNextAutosave(): void {
  * 入力・図面の変更を購読してドラフトを自動保存する（2秒デバウンス）。
  * 初回マウント時の保存はスキップする（編集していないのにドラフトが残るのを防ぐ）。
  */
-export function useDraftAutosave(versionSettings: VersionSettings): void {
+export function useDraftAutosave(): void {
   const engineV = useEngineVersion();
   const drawingsV = useDrawingsVersion();
   const first = useRef(true);
@@ -133,8 +132,8 @@ export function useDraftAutosave(versionSettings: VersionSettings): void {
     const myEpoch = draftEpoch;
     const timer = setTimeout(() => {
       if (myEpoch !== draftEpoch) return; // この保存予約より後に clearDraft された
-      void saveDraft(versionSettings);
+      void saveDraft();
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [engineV, drawingsV, versionSettings]);
+  }, [engineV, drawingsV]);
 }

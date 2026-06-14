@@ -12,11 +12,7 @@ import type { SheetModel } from "@/engine/workbook";
 import { colName, addrOf, widthPx, computeMerges, asTextAlign } from "@/lib/grid";
 import CellInput from "./CellInput";
 import SheetOverlays from "./SheetOverlays";
-import {
-  DEFAULT_VERSION_SETTINGS,
-  coverVersionLabel,
-  type VersionSettings,
-} from "@/lib/version";
+import { coverVersionLabel } from "@/lib/version";
 import { SHEETS } from "@/lib/sheets";
 
 const BORDER = "1px solid #9aa0a6";
@@ -44,7 +40,6 @@ function SheetGrid({
   faithful = false,
   scale = 1,
   interactiveDrawings = false,
-  versionSettings = DEFAULT_VERSION_SETTINGS,
   inputOnly = false,
 }: {
   sheetName: string;
@@ -52,7 +47,6 @@ function SheetGrid({
   faithful?: boolean; // true: Excel忠実(罫線・塗りそのまま・計算セルも素の見た目)
   scale?: number;
   interactiveDrawings?: boolean; // true: 図面枠を編集可能に（false=帳票焼き込み）
-  versionSettings?: VersionSettings;
   inputOnly?: boolean; // true: 入力欄を含む行だけに絞ってコンパクト表示
 }) {
   // SheetGrid 本体は計算エンジンを購読しない（数式セルは FormulaCell が、
@@ -195,7 +189,7 @@ function SheetGrid({
                 } else if (isFormula) {
                   content = <FormulaCell sheet={sheetName} addr={addr} />;
                 } else if (sheetName === SHEETS.cover && addr === "B18") {
-                  content = coverVersionLabel(versionSettings);
+                  content = coverVersionLabel();
                 } else if (raw !== null && raw !== undefined) {
                   content = String(raw);
                 }

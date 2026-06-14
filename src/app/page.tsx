@@ -11,33 +11,8 @@ import { downloadBundle, loadFile } from "@/lib/storage";
 import { useDraftAutosave, clearDraft, skipNextAutosave } from "@/lib/autosave";
 import { validate, type Issue } from "@/engine/validate";
 import { exportReportPdf } from "@/lib/pdf";
-import { DEFAULT_VERSION_SETTINGS, type VersionSettings } from "@/lib/version";
 import { SHEETS } from "@/lib/sheets";
 import { useZoom, useEmptyJump, useDraftRestore } from "./hooks";
-
-function VersionInput({
-  label,
-  value,
-  onChange,
-  note,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  note?: string;
-}) {
-  return (
-    <label className="version-field">
-      <span>{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={label.includes("バージョン") ? label : `${label}バージョン`}
-      />
-      {note && <span className="version-note">{note}</span>}
-    </label>
-  );
-}
 
 export default function Home() {
   const model = engine().model;
@@ -46,7 +21,6 @@ export default function Home() {
   const [msg, setMsg] = useState<string | null>(null);
   const [issues, setIssues] = useState<Issue[] | null>(null);
   const [showManual, setShowManual] = useState(false);
-  const [versionSettings, setVersionSettings] = useState<VersionSettings>(DEFAULT_VERSION_SETTINGS);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // 表示倍率（縮小・拡大・全体フィット）
@@ -67,8 +41,8 @@ export default function Home() {
   }
 
   // ドラフト自動保存と、起動時の復元確認
-  useDraftAutosave(versionSettings);
-  useDraftRestore({ onVersionSettings: setVersionSettings, flash });
+  useDraftAutosave();
+  useDraftRestore({ flash });
 
   function runCheck() {
     setIssues(validate(engine()));
@@ -112,8 +86,7 @@ export default function Home() {
     if (!f) return;
     try {
       skipNextAutosave();
-      const loadedVersionSettings = await loadFile(f);
-      if (loadedVersionSettings) setVersionSettings(loadedVersionSettings);
+      await loadFile(f);
       clearDraft(); // 明示的な読込でドラフトは破棄（以後の編集で再作成される）
       flash(`読込完了: ${f.name}`);
     } catch (err: any) {
@@ -135,20 +108,7 @@ export default function Home() {
         style={{ background: "var(--head)" }}
       >
         <span className="font-bold text-lg">逹エネ断熱シミュレーター</span>
-        <div className="version-settings" aria-label="バージョン管理">
-          <span className="text-xs opacity-85">Web版</span>
-          <VersionInput
-            label="管理バージョン"
-            value={versionSettings.individual}
-            onChange={(individual) => setVersionSettings((v) => ({ ...v, individual }))}
-            note="（PDFには出力されません／保存ファイルに記録されます）"
-          />
-          <VersionInput
-            label="正式"
-            value={versionSettings.official}
-            onChange={(official) => setVersionSettings((v) => ({ ...v, official }))}
-          />
-        </div>
+        <span className="text-xs opacity-85">Web版</span>
         <div className="ml-auto flex gap-2 flex-wrap">
           <button
             className="toolbar-btn"
@@ -169,7 +129,7 @@ export default function Home() {
             style={{ background: "transparent", border: "1px solid #ffffff66", color: "#fff" }}
             onClick={async () => {
               try {
-                await downloadBundle(versionSettings);
+                await downloadBundle();
                 clearDraft();
                 flash("保存しました（.zip）");
               } catch (err: any) {
@@ -306,14 +266,13 @@ export default function Home() {
           model={model.sheets[active]}
           faithful={active === SHEETS.evaluation}
           interactiveDrawings={active === SHEETS.evaluation}
-          versionSettings={versionSettings}
           scale={scale}
           inputOnly={inputOnly}
         />
       </main>
 
         {/* PDF捕捉用（オフスクリーン）。生成時のみマウントして常駐描画コストを避ける */}
-        {reportMounted && <ReportFrame versionSettings={versionSettings} />}
+        {reportMounted && <ReportFrame />}
       </div>
 
       {/* 操作マニュアル（inert領域の外） */}

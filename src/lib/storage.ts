@@ -14,10 +14,7 @@ import {
   safeImageMime,
   type SlotMeta,
 } from "@/drawings/store";
-import {
-  normalizeVersionSettings,
-  type VersionSettings,
-} from "@/lib/version";
+import { APP_VERSION } from "@/lib/version";
 
 const SAVE_APP_ID = "tatuene-insulation";
 const LEGACY_SAVE_APP_ID = "katsuene-insulation";
@@ -29,22 +26,19 @@ type SaveAppId = typeof SAVE_APP_ID | typeof LEGACY_SAVE_APP_ID;
 export interface SaveFile {
   app: SaveAppId;
   version: string;
-  versionSettings?: VersionSettings;
   savedAt: string;
   title?: string;
   inputs: Record<string, string | number>;
   drawings?: Record<string, SlotMeta>;
 }
 
-export function buildSaveFile(versionSettings?: VersionSettings): SaveFile {
+export function buildSaveFile(): SaveFile {
   const inputs = engine().collectInputs();
   const title = (engine().getInputRaw("表紙", "E30") as string) || "無題";
   const drawings = collectMeta();
-  const versions = normalizeVersionSettings(versionSettings);
   return {
     app: SAVE_APP_ID,
-    version: versions.official,
-    versionSettings: versions,
+    version: APP_VERSION,
     savedAt: new Date().toISOString(),
     title,
     inputs,
@@ -62,8 +56,8 @@ function triggerDownload(blob: Blob, filename: string) {
 }
 
 /** ZIPバンドルを保存（入力＋図面＋画像を1ファイルに）。 */
-export async function downloadBundle(versionSettings?: VersionSettings) {
-  const data = buildSaveFile(versionSettings);
+export async function downloadBundle() {
+  const data = buildSaveFile();
   const safeTitle = (data.title || "診断").replace(/[\\/:*?"<>|]/g, "_");
   const JSZip = (await import("jszip")).default;
   const zip = new JSZip();
@@ -79,18 +73,17 @@ export async function downloadBundle(versionSettings?: VersionSettings) {
 }
 
 /** 保存データを反映（ファイル読込・ドラフト復元の共通処理）。 */
-export function applyData(data: SaveFile, images: Record<string, string>): VersionSettings | null {
+export function applyData(data: SaveFile, images: Record<string, string>): void {
   if ((data.app !== SAVE_APP_ID && data.app !== LEGACY_SAVE_APP_ID) || !data.inputs) {
     throw new Error("このファイルは逹エネ断熱シミュレーターの保存データではありません。");
   }
   applyInputs(data.inputs);
   clearAll();
   if (data.drawings) restore(data.drawings, images);
-  return data.versionSettings ? normalizeVersionSettings(data.versionSettings) : null;
 }
 
 /** .zip / .json を読み込んで反映。 */
-export async function loadFile(file: File): Promise<VersionSettings | null> {
+export async function loadFile(file: File): Promise<void> {
   const isZip = /\.zip$/i.test(file.name) || file.type === "application/zip" || file.type === "application/x-zip-compressed";
   if (isZip) {
     const JSZip = (await import("jszip")).default;

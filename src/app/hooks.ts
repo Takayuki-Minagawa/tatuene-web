@@ -6,7 +6,6 @@ import { engine, useEngineVersion } from "@/engine/store";
 import type { SheetModel } from "@/engine/workbook";
 import { loadDraft, clearDraft } from "@/lib/autosave";
 import { applyData } from "@/lib/storage";
-import type { VersionSettings } from "@/lib/version";
 
 /** 表示倍率（縮小・拡大・全体フィット）。シート切替後も維持。 */
 export function useZoom(mainRef: RefObject<HTMLElement | null>) {
@@ -63,10 +62,9 @@ export function useEmptyJump(
 
 /** 起動時に前回のドラフトがあれば復元確認する（1回限り）。 */
 export function useDraftRestore(opts: {
-  onVersionSettings: (vs: VersionSettings) => void;
   flash: (m: string) => void;
 }) {
-  const { onVersionSettings, flash } = opts;
+  const { flash } = opts;
   const draftChecked = useRef(false);
   useEffect(() => {
     if (draftChecked.current) return;
@@ -79,8 +77,7 @@ export function useDraftRestore(opts: {
         : "日時不明";
       if (confirm(`前回の編集データが残っています（${when}）。復元しますか？`)) {
         try {
-          const vs = applyData(draft.data, draft.images);
-          if (vs) onVersionSettings(vs);
+          applyData(draft.data, draft.images);
           flash("前回の編集を復元しました");
         } catch (err) {
           // 壊れたドラフトは破棄する。残すと次回起動でも同じ復元で失敗し続けるため。

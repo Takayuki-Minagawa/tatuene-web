@@ -6,8 +6,8 @@
  *  - ラベル/固定セル: テキスト表示
  * 結合セル・配置・太字・表示形式は Excel から抽出した情報を反映。
  */
-import React from "react";
-import { engine, useEngineVersion } from "@/engine/store";
+import React, { useMemo } from "react";
+import { useDisplay } from "@/engine/store";
 import type { SheetModel } from "@/engine/workbook";
 import { colName, addrOf, widthPx, computeMerges, asTextAlign } from "@/lib/grid";
 import CellInput from "./CellInput";
@@ -26,7 +26,18 @@ const STICKY_HEADER_ROWS: Record<string, number[]> = {
   部材性能シート: [9, 10], // 「建材／熱抵抗値…」と単位の2行
 };
 
-export default function SheetGrid({
+/** 数式セルの表示値。そのセルの表示文字列だけを購読し、変化時のみ再描画する。 */
+const FormulaCell = React.memo(function FormulaCell({
+  sheet,
+  addr,
+}: {
+  sheet: string;
+  addr: string;
+}) {
+  return <>{useDisplay(sheet, addr)}</>;
+});
+
+function SheetGrid({
   sheetName,
   model,
   faithful = false,
@@ -43,31 +54,33 @@ export default function SheetGrid({
   versionSettings?: VersionSettings;
   inputOnly?: boolean; // true: 入力欄を含む行だけに絞ってコンパクト表示
 }) {
-  useEngineVersion(); // 計算セルの再描画購読
-  const eng = engine();
-  const { anchors, covered } = computeMerges(model.merges);
-  const inputSet = new Set(model.inputs.map((i) => i.addr));
-  const dropdownSet = new Set(model.dropdownCells);
+  // SheetGrid 本体は計算エンジンを購読しない（数式セルは FormulaCell が、
+  // 入力セルは CellInput が、それぞれ自分の値だけを購読して更新する）。
+  // 派生値は model/scale が変わらない限り再計算しない。
+  const { anchors, covered } = useMemo(() => computeMerges(model.merges), [model]);
+  const inputSet = useMemo(() => new Set(model.inputs.map((i) => i.addr)), [model]);
+  const dropdownSet = useMemo(() => new Set(model.dropdownCells), [model]);
 
-  const colPx: number[] = [];
-  for (let c = 0; c < model.maxCol; c++)
-    colPx.push(Math.round(widthPx(model.colWidths[colName(c)]) * scale));
+  const { colPx, rowPx, colLeft, rowTop, images, slots, hasOverlays } = useMemo(() => {
+    const colPx: number[] = [];
+    for (let c = 0; c < model.maxCol; c++)
+      colPx.push(Math.round(widthPx(model.colWidths[colName(c)]) * scale));
 
-  // 画像（説明用挿絵）・図面枠の配置計算
-  const images = model.images ?? [];
-  const slots = model.drawingSlots ?? [];
-  const hasImages = images.length > 0;
-  const hasOverlays = hasImages || slots.length > 0;
-  const defRow = Math.round((model.defaultRowHeight ?? 15) * (4 / 3) * scale);
-  const rowPx: number[] = [];
-  for (let r = 0; r < model.maxRow; r++) {
-    const h = model.rowHeights[(r + 1).toString()];
-    rowPx.push(h ? Math.round(h * (4 / 3) * scale) : defRow);
-  }
-  const colLeft = [0];
-  for (let c = 0; c < model.maxCol; c++) colLeft.push(colLeft[c] + colPx[c]);
-  const rowTop = [0];
-  for (let r = 0; r < model.maxRow; r++) rowTop.push(rowTop[r] + rowPx[r]);
+    const images = model.images ?? [];
+    const slots = model.drawingSlots ?? [];
+    const hasOverlays = images.length > 0 || slots.length > 0;
+    const defRow = Math.round((model.defaultRowHeight ?? 15) * (4 / 3) * scale);
+    const rowPx: number[] = [];
+    for (let r = 0; r < model.maxRow; r++) {
+      const h = model.rowHeights[(r + 1).toString()];
+      rowPx.push(h ? Math.round(h * (4 / 3) * scale) : defRow);
+    }
+    const colLeft = [0];
+    for (let c = 0; c < model.maxCol; c++) colLeft.push(colLeft[c] + colPx[c]);
+    const rowTop = [0];
+    for (let r = 0; r < model.maxRow; r++) rowTop.push(rowTop[r] + rowPx[r]);
+    return { colPx, rowPx, colLeft, rowTop, images, slots, hasOverlays };
+  }, [model, scale]);
 
   // 入力モード: 入力欄を含む行だけ表示（図面ありシートは対象外）。結合は無効化して
   // 隠れた行をまたぐ結合の崩れを防ぐ。
@@ -158,7 +171,7 @@ export default function SheetGrid({
                     <CellInput sheet={sheetName} addr={addr} isDropdown={isDropdown} align={align} />
                   );
                 } else if (isFormula) {
-                  content = eng.getDisplay(sheetName, addr);
+                  content = <FormulaCell sheet={sheetName} addr={addr} />;
                 } else if (sheetName === "表紙" && addr === "B18") {
                   content = coverVersionLabel(versionSettings);
                 } else if (raw !== null && raw !== undefined) {
@@ -217,3 +230,7 @@ export default function SheetGrid({
     </div>
   );
 }
+
+// props（sheetName/model/scale/inputOnly 等）が同じなら再描画しない。
+// 値の更新は内部の FormulaCell / CellInput が各自購読して行う。
+export default React.memo(SheetGrid);

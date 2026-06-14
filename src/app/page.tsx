@@ -285,7 +285,9 @@ export default function Home() {
             sheetName={active}
             model={model.sheets[active]}
             faithful={active === SHEETS.evaluation}
-            interactiveDrawings={active === SHEETS.evaluation}
+            // 評価シートの図は計算シートの図のコピー表示のみ。ここでは編集させない
+            // （slot1/slot2＝コピー、slot3＝空スロットの編集UIも出さない）。
+            interactiveDrawings={false}
             scale={scale}
             inputOnly={inputOnly}
           />

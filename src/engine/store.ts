@@ -31,6 +31,21 @@ export function useEngineVersion(): number {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
+/**
+ * 1セルの入力生値だけを購読する（セル単位の細粒度購読）。
+ * 返り値はプリミティブなので、その値が変わったセルのみ再描画される。
+ */
+export function useInputValue(sheet: string, addr: string): any {
+  const read = () => engine().getInputRaw(sheet, addr);
+  return useSyncExternalStore(subscribe, read, read);
+}
+
+/** 1セルの表示文字列（数式結果の整形済み）だけを購読する。 */
+export function useDisplay(sheet: string, addr: string): string {
+  const read = () => engine().getDisplay(sheet, addr);
+  return useSyncExternalStore(subscribe, read, read);
+}
+
 export function setInput(sheet: string, addr: string, value: string | number | null) {
   engine().setInput(sheet, addr, value);
   emit();

@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import SheetGrid from "@/components/SheetGrid";
 import CheckPanel from "@/components/CheckPanel";
 import Manual from "@/components/Manual";
@@ -65,18 +66,23 @@ export default function Home() {
     setScale(clampScale(ratio));
   }
 
+  // PDF生成時のみ帳票(評価シート)をマウントする
+  const [reportMounted, setReportMounted] = useState(false);
+
   // 入力モード（入力欄を含む行だけ表示）と、未入力(空欄)の可視化・ジャンプ
   const [inputOnly, setInputOnly] = useState(false);
-  useEngineVersion(); // 入力で空欄数が変わるのでヘッダー表示を再描画購読
+  const version = useEngineVersion(); // 入力で空欄数が変わるのでヘッダー表示を再描画購読
   const sheetModel = model.sheets[active];
-  const dropdownSet = new Set(sheetModel.dropdownCells);
-  const emptyCount = sheetModel.inputs.filter(
-    (i) =>
-      !dropdownSet.has(i.addr) &&
-      ((v) => v === null || v === undefined || String(v).trim() === "")(
-        engine().getInputRaw(active, i.addr),
-      ),
-  ).length;
+  // アクティブシートの空欄数。シート・入力内容が変わったときだけ再計算する。
+  const emptyCount = useMemo(() => {
+    const dropdowns = new Set(sheetModel.dropdownCells);
+    const isBlank = (v: unknown) =>
+      v === null || v === undefined || String(v).trim() === "";
+    return sheetModel.inputs.filter(
+      (i) => !dropdowns.has(i.addr) && isBlank(engine().getInputRaw(active, i.addr)),
+    ).length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [version, active, sheetModel]);
   function jumpNextEmpty() {
     const root = mainRef.current;
     if (!root) return;
@@ -127,7 +133,13 @@ export default function Home() {
   async function generatePdf() {
     setIssues(null);
     flash("PDFを生成しています…");
+    // 帳票(評価シート)は常時ではなく生成時だけマウントする（常駐描画コストの削減）。
+    flushSync(() => setReportMounted(true));
     try {
+      // マウント・レイアウト確定を待ってから捕捉する
+      await new Promise<void>((res) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => res())),
+      );
       const node = document.getElementById(REPORT_FRAME_ID);
       if (!node) throw new Error("帳票が見つかりません");
       const title = (engine().getInputRaw("表紙", "E30") as string) || "診断";
@@ -135,6 +147,8 @@ export default function Home() {
       flash("PDF帳票を保存しました");
     } catch (e: any) {
       flash("PDF生成エラー: " + (e?.message ?? e));
+    } finally {
+      setReportMounted(false);
     }
   }
 
@@ -354,8 +368,8 @@ export default function Home() {
         />
       </main>
 
-        {/* PDF捕捉用（オフスクリーン・常時描画） */}
-        <ReportFrame versionSettings={versionSettings} />
+        {/* PDF捕捉用（オフスクリーン）。生成時のみマウントして常駐描画コストを避ける */}
+        {reportMounted && <ReportFrame versionSettings={versionSettings} />}
       </div>
 
       {/* 操作マニュアル（inert領域の外） */}

@@ -30,6 +30,7 @@ export default function CheckPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="check-title"
+        tabIndex={-1}
         className="bg-white rounded-lg shadow-2xl w-[560px] max-w-[92vw] max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
@@ -54,14 +55,16 @@ export default function CheckPanel({
               </div>
               <ul className="space-y-1">
                 {errors.map((i, idx) => (
-                  <li
-                    key={idx}
-                    className="text-sm rounded p-2 cursor-pointer"
-                    style={{ background: "#fde8e6", border: "1px solid #f1b0aa" }}
-                    onClick={() => onJump(i.sheet)}
-                  >
-                    ❌ {i.message}
-                    <span className="text-xs opacity-60"> [{i.sheet}!{i.addr}]</span>
+                  <li key={idx}>
+                    <button
+                      type="button"
+                      className="w-full text-left text-sm rounded p-2 cursor-pointer"
+                      style={{ background: "#fde8e6", border: "1px solid #f1b0aa" }}
+                      onClick={() => onJump(i.sheet)}
+                    >
+                      ❌ {i.message}
+                      <span className="text-xs opacity-60"> [{i.sheet}!{i.addr}]</span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -74,14 +77,16 @@ export default function CheckPanel({
               </div>
               <ul className="space-y-1">
                 {warnings.map((i, idx) => (
-                  <li
-                    key={idx}
-                    className="text-sm rounded p-2 cursor-pointer"
-                    style={{ background: "#fff3e0", border: "1px solid #f0c081" }}
-                    onClick={() => onJump(i.sheet)}
-                  >
-                    ⚠ {i.message}
-                    <span className="text-xs opacity-60"> [{i.sheet}!{i.addr}]</span>
+                  <li key={idx}>
+                    <button
+                      type="button"
+                      className="w-full text-left text-sm rounded p-2 cursor-pointer"
+                      style={{ background: "#fff3e0", border: "1px solid #f0c081" }}
+                      onClick={() => onJump(i.sheet)}
+                    >
+                      ⚠ {i.message}
+                      <span className="text-xs opacity-60"> [{i.sheet}!{i.addr}]</span>
+                    </button>
                   </li>
                 ))}
               </ul>

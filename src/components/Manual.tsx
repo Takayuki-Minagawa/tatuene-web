@@ -87,6 +87,11 @@ export default function Manual({ onClose }: { onClose: () => void }) {
               <Chip color="#eef4ff" label="青 = 自動計算（編集不可）" />
               <Chip color="#ffffff" label="白/無色 = 見出し・固定値" />
             </p>
+            <p className="mt-2">
+              入力シートは項目ごとのセクションに分かれています。見出しをクリックすると
+              開閉でき、<strong>「解説▼」</strong>を押すとその項目・セクションの説明が表示されます。
+              間取り図や各部の熱損失計算など横に広い表は、枠内を左右にスクロールできます。
+            </p>
           </Section>
 
           <Section title="３．入力の手順">

@@ -2,6 +2,8 @@
 import React, { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import SheetGrid from "@/components/SheetGrid";
+import InputSheet from "@/components/InputSheet";
+import { getSheetLayout } from "@/lib/sheet-layout";
 import CheckPanel from "@/components/CheckPanel";
 import Manual from "@/components/Manual";
 import ReportFrame, { REPORT_FRAME_ID } from "@/components/ReportFrame";
@@ -34,6 +36,8 @@ export default function Home() {
   const [inputOnly, setInputOnly] = useState(false);
   const sheetModel = model.sheets[active];
   const { emptyCount, jumpNextEmpty } = useEmptyJump(mainRef, active, sheetModel);
+  // フォーム表示のシートでは、グリッド専用の操作（入力モード・空欄ジャンプ・表示倍率）は出さない。
+  const isFormSheet = !!getSheetLayout(active);
 
   function flash(m: string) {
     setMsg(m);
@@ -179,7 +183,9 @@ export default function Home() {
             {s}
           </button>
         ))}
-        {/* 入力支援（入力モード切替・未入力ジャンプ） */}
+        {/* 入力支援（入力モード切替・未入力ジャンプ）・表示倍率 ※グリッド表示のシートのみ */}
+        {!isFormSheet && (
+        <>
         <div className="ml-auto flex items-center gap-1 self-center pr-2 text-xs text-slate-600">
           <button
             onClick={() => setInputOnly((v) => !v)}
@@ -242,7 +248,10 @@ export default function Home() {
             100%
           </button>
         </div>
+        </>
+        )}
         <button
+          className={isFormSheet ? "ml-auto px-3 py-2 text-xs self-center" : "px-3 py-2 text-xs self-center"}
           onClick={() => {
             if (confirm("すべての入力と図面を初期状態に戻します。よろしいですか？")) {
               skipNextAutosave();
@@ -252,23 +261,33 @@ export default function Home() {
               flash("初期化しました");
             }
           }}
-          className="px-3 py-2 text-xs self-center"
           style={{ color: "#666" }}
         >
           ↺ 初期化
         </button>
       </div>
 
-      {/* グリッド */}
-      <main ref={mainRef} className="input-guide flex-1 overflow-hidden p-3" style={{ background: "#eef0f2" }}>
-        <SheetGrid
-          sheetName={active}
-          model={model.sheets[active]}
-          faithful={active === SHEETS.evaluation}
-          interactiveDrawings={active === SHEETS.evaluation}
-          scale={scale}
-          inputOnly={inputOnly}
-        />
+      {/* グリッド／フォーム */}
+      <main
+        ref={mainRef}
+        className={
+          "input-guide flex-1 p-3 " +
+          (getSheetLayout(active) ? "overflow-auto" : "overflow-hidden")
+        }
+        style={{ background: "#eef0f2" }}
+      >
+        {getSheetLayout(active) ? (
+          <InputSheet sheetName={active} />
+        ) : (
+          <SheetGrid
+            sheetName={active}
+            model={model.sheets[active]}
+            faithful={active === SHEETS.evaluation}
+            interactiveDrawings={active === SHEETS.evaluation}
+            scale={scale}
+            inputOnly={inputOnly}
+          />
+        )}
       </main>
 
         {/* PDF捕捉用（オフスクリーン）。生成時のみマウントして常駐描画コストを避ける */}

@@ -26,8 +26,9 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version, sheet, section]);
 
+  const isReftable = section.kind === "reftable" && !!section.reftable;
   return (
-    <section className="form-section">
+    <section className={"form-section" + (isReftable ? " is-reftable" : "")}>
       <div className="form-section-head">
         <button
           type="button"
@@ -59,8 +60,8 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
           として枠の div は常に残す。 */}
       <div id={bodyId} hidden={!open}>
         {open &&
-          (section.kind === "reftable" && section.reftable ? (
-            <RefTable sheet={sheet} region={section.reftable} />
+          (isReftable ? (
+            <RefTable sheet={sheet} region={section.reftable!} />
           ) : (
             <div className="form-fields">
               {section.items.map((it) => (

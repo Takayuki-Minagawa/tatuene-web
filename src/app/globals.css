@@ -68,6 +68,14 @@ table.xl-grid {
 .xl-grid.faithful .xl-cell {
   border: none;
 }
+/* 帳票(faithful)では入力欄を編集ボックスとして見せない。値だけを素のテキストで
+   表示し、空セルは白紙にする（例示ケースの大量の空セルが黄色いグリッドになるのを解消）。
+   クリックすれば従来どおり編集可能。 */
+.xl-grid.faithful .cell-edit,
+.xl-grid.faithful .cell-select {
+  background: transparent;
+  border: none;
+}
 /* 画像配置シート: 行高をExcel基準に合わせるためセルの固定高さを解除 */
 .xl-grid.with-images .xl-cell {
   height: auto;

@@ -197,7 +197,9 @@ table.xl-grid {
   --a4-width: 720px;
 }
 .input-form {
-  max-width: var(--a4-width);
+  /* デバイス幅をできるだけ使う。入力欄(フィールド)はA4縦幅で読みやすく中央寄せ、
+     参照表(reftable)だけは横長に広げてセルを大きく見せる。 */
+  max-width: 1600px;
   margin: 0 auto;
   padding-bottom: 40px;
 }
@@ -205,14 +207,21 @@ table.xl-grid {
   font-size: 18px;
   font-weight: 700;
   color: var(--head);
-  margin: 4px 2px 12px;
+  margin: 4px auto 12px;
+  max-width: var(--a4-width);
 }
 .form-section {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
   overflow: hidden;
+  /* 既定（入力欄セクション）はA4縦幅で中央寄せ＝1列で読みやすく */
+  max-width: var(--a4-width);
+}
+/* 参照表セクションは画面幅いっぱいに広げる（セルを横長に） */
+.form-section.is-reftable {
+  max-width: 100%;
 }
 .form-section-head {
   display: flex;
@@ -338,19 +347,42 @@ table.xl-grid {
 .reftable-scroll {
   overflow-x: auto;
   padding: 8px 0 12px;
+  /* 幅に収まらない場合の水平スライダーを常時はっきり見せる */
+  scrollbar-width: auto;
+  scrollbar-color: #9aa0a6 #eceff1;
+}
+.reftable-scroll::-webkit-scrollbar {
+  height: 14px;
+}
+.reftable-scroll::-webkit-scrollbar-track {
+  background: #eceff1;
+}
+.reftable-scroll::-webkit-scrollbar-thumb {
+  background: #9aa0a6;
+  border: 3px solid #eceff1;
+  border-radius: 8px;
+}
+.reftable-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
 }
 .reftable {
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
+  /* デバイス幅に応じて伸縮: 余白があればセルを横長に広げ(width:100%)、
+     収まらなければ内容幅を保ってスクロール(min-width:max-content)。
+     列ごとの幅は内容/colgroup に応じて変わってよい（table-layout:auto）。 */
+  width: 100%;
+  min-width: max-content;
+  table-layout: auto;
 }
 .reftable-cell {
   border: 1px solid #d4d9de;
-  padding: 2px 4px;
+  padding: 4px 6px;
   white-space: nowrap;
   vertical-align: middle;
 }
 .reftable-cell.is-input {
   padding: 0;
-  min-width: 90px;
+  min-width: 96px;
 }
 

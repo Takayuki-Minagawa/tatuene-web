@@ -49,7 +49,9 @@ export default function CellInput({
   }
   return (
     <input
-      className="cell-edit"
+      className={"cell-edit" + (engineStr === "" ? " is-empty" : "")}
+      data-input-addr={addr}
+      data-empty={engineStr === "" ? "1" : undefined}
       style={{ textAlign: align }}
       value={local}
       onFocus={() => (focused.current = true)}

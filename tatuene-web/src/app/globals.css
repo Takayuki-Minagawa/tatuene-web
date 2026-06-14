@@ -98,6 +98,16 @@ table.xl-grid {
   background: #fffdf2;
   cursor: pointer;
 }
+/* 空欄の入力セルを淡く強調（インタラクティブ画面のみ。PDF帳票には適用しない） */
+.input-guide .cell-edit.is-empty {
+  background: #fffbeb;
+  box-shadow: inset 3px 0 0 #f0b429;
+}
+/* ジャンプでフォーカスした空欄を一瞬強めに示す */
+.input-guide .cell-edit.is-empty:focus {
+  background: #fff3c4;
+  box-shadow: inset 3px 0 0 #de911d, 0 0 0 2px rgba(222, 145, 29, 0.25);
+}
 
 /* ===== 図面エディタ ツールバー ===== */
 .draw-toolbar {

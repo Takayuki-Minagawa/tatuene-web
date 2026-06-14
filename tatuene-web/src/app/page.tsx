@@ -4,7 +4,7 @@ import SheetGrid from "@/components/SheetGrid";
 import CheckPanel from "@/components/CheckPanel";
 import Manual from "@/components/Manual";
 import ReportFrame, { REPORT_FRAME_ID } from "@/components/ReportFrame";
-import { engine, resetDefaults } from "@/engine/store";
+import { engine, resetDefaults, useEngineVersion } from "@/engine/store";
 import { clearAll as clearDrawings } from "@/drawings/store";
 import { downloadBundle, loadFile, applyData } from "@/lib/storage";
 import { useDraftAutosave, loadDraft, clearDraft, skipNextAutosave } from "@/lib/autosave";
@@ -63,6 +63,29 @@ export default function Home() {
       scale *
       0.98; // 端の罫線が切れないよう少し余白を残す
     setScale(clampScale(ratio));
+  }
+
+  // 入力モード（入力欄を含む行だけ表示）と、未入力(空欄)の可視化・ジャンプ
+  const [inputOnly, setInputOnly] = useState(false);
+  useEngineVersion(); // 入力で空欄数が変わるのでヘッダー表示を再描画購読
+  const sheetModel = model.sheets[active];
+  const dropdownSet = new Set(sheetModel.dropdownCells);
+  const emptyCount = sheetModel.inputs.filter(
+    (i) =>
+      !dropdownSet.has(i.addr) &&
+      ((v) => v === null || v === undefined || String(v).trim() === "")(
+        engine().getInputRaw(active, i.addr),
+      ),
+  ).length;
+  const jumpIdx = useRef(0);
+  function jumpNextEmpty() {
+    const nodes = mainRef.current?.querySelectorAll<HTMLElement>('[data-empty="1"]');
+    if (!nodes || nodes.length === 0) return;
+    const i = jumpIdx.current % nodes.length;
+    jumpIdx.current = i + 1;
+    const el = nodes[i];
+    el.scrollIntoView({ block: "center", inline: "center" });
+    el.focus();
   }
 
   function flash(m: string) {
@@ -235,8 +258,32 @@ export default function Home() {
             {s}
           </button>
         ))}
+        {/* 入力支援（入力モード切替・未入力ジャンプ） */}
+        <div className="ml-auto flex items-center gap-1 self-center pr-2 text-xs text-slate-600">
+          <button
+            onClick={() => setInputOnly((v) => !v)}
+            aria-pressed={inputOnly}
+            className={
+              "px-2 py-1 rounded border " +
+              (inputOnly
+                ? "border-green-700 bg-green-700 text-white"
+                : "border-slate-300 bg-white hover:bg-slate-100")
+            }
+            title="入力欄を含む行だけに絞って表示（評価シートは対象外）"
+          >
+            入力モード
+          </button>
+          <button
+            onClick={jumpNextEmpty}
+            disabled={emptyCount === 0}
+            className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40"
+            title="次の空欄の入力へ移動"
+          >
+            空欄 {emptyCount}｜次へ ⏭
+          </button>
+        </div>
         {/* 表示倍率（縮小・拡大・全体表示・標準に戻す） */}
-        <div className="ml-auto flex items-center gap-1 self-center pr-1 text-xs text-slate-600">
+        <div className="flex items-center gap-1 self-center pr-1 text-xs text-slate-600">
           <button
             onClick={() => zoomBy(-0.1)}
             disabled={scale <= MIN_SCALE}
@@ -292,7 +339,7 @@ export default function Home() {
       </div>
 
       {/* グリッド */}
-      <main ref={mainRef} className="flex-1 overflow-hidden p-3" style={{ background: "#eef0f2" }}>
+      <main ref={mainRef} className="input-guide flex-1 overflow-hidden p-3" style={{ background: "#eef0f2" }}>
         <SheetGrid
           sheetName={active}
           model={model.sheets[active]}
@@ -300,6 +347,7 @@ export default function Home() {
           interactiveDrawings={active === "評価シート"}
           versionSettings={versionSettings}
           scale={scale}
+          inputOnly={inputOnly}
         />
       </main>
 

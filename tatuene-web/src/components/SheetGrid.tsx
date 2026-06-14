@@ -20,6 +20,12 @@ import {
 
 const BORDER = "1px solid #9aa0a6";
 
+// 見出し固定の対象行（0始まりインデックス）。スクロールしても画面上部に貼り付く。
+// 列見出しが中段にある表のみ設定（先頭からの連続行でなくてよい）。
+const STICKY_HEADER_ROWS: Record<string, number[]> = {
+  部材性能シート: [9, 10], // 「建材／熱抵抗値…」と単位の2行
+};
+
 export default function SheetGrid({
   sheetName,
   model,
@@ -27,6 +33,7 @@ export default function SheetGrid({
   scale = 1,
   interactiveDrawings = false,
   versionSettings = DEFAULT_VERSION_SETTINGS,
+  inputOnly = false,
 }: {
   sheetName: string;
   model: SheetModel;
@@ -34,6 +41,7 @@ export default function SheetGrid({
   scale?: number;
   interactiveDrawings?: boolean; // true: 図面枠を編集可能に（false=帳票焼き込み）
   versionSettings?: VersionSettings;
+  inputOnly?: boolean; // true: 入力欄を含む行だけに絞ってコンパクト表示
 }) {
   useEngineVersion(); // 計算セルの再描画購読
   const eng = engine();
@@ -61,6 +69,24 @@ export default function SheetGrid({
   const rowTop = [0];
   for (let r = 0; r < model.maxRow; r++) rowTop.push(rowTop[r] + rowPx[r]);
 
+  // 入力モード: 入力欄を含む行だけ表示（図面ありシートは対象外）。結合は無効化して
+  // 隠れた行をまたぐ結合の崩れを防ぐ。
+  const useInputOnly = inputOnly && !hasOverlays;
+  const inputRowSet = useInputOnly
+    ? new Set(model.inputs.map((i) => i.row))
+    : null;
+
+  // 見出し固定: 対象行の上端オフセットを積み上げて算出（図面あり・入力モードでは無効）
+  const stickyRows = hasOverlays || useInputOnly ? [] : STICKY_HEADER_ROWS[sheetName] ?? [];
+  const stickyTop = new Map<number, number>();
+  {
+    let acc = 0;
+    for (const r of [...stickyRows].sort((a, b) => a - b)) {
+      stickyTop.set(r, acc);
+      acc += rowPx[r] ?? 0;
+    }
+  }
+
   return (
     <div className="grid-scroll">
       <div style={{ position: "relative", width: "max-content" }}>
@@ -74,12 +100,14 @@ export default function SheetGrid({
           ))}
         </colgroup>
         <tbody>
-          {Array.from({ length: model.maxRow }, (_, r) => (
+          {Array.from({ length: model.maxRow }, (_, r) => {
+            if (inputRowSet && !inputRowSet.has(r)) return null;
+            return (
             <tr key={r} style={hasOverlays ? { height: rowPx[r] } : undefined}>
               {Array.from({ length: model.maxCol }, (_, c) => {
                 const key = `${r},${c}`;
-                if (covered.has(key)) return null;
-                const span = anchors.get(key);
+                if (!useInputOnly && covered.has(key)) return null;
+                const span = useInputOnly ? undefined : anchors.get(key);
                 const addr = addrOf(r, c);
                 const sid = model.styles[r]?.[c] ?? -1;
                 const st = sid >= 0 ? model.styleTable[sid] : null;
@@ -121,6 +149,7 @@ export default function SheetGrid({
                 }
 
                 const fontPx = Math.max(8, Math.round((st?.sz ?? 11) * 1.15 * scale));
+                const isSticky = stickyTop.has(r);
 
                 return (
                   <td
@@ -138,6 +167,14 @@ export default function SheetGrid({
                       color: !faithful && isFormula ? "#14418a" : st?.color || undefined,
                       padding: isInput ? 0 : "1px 3px",
                       ...borderStyle,
+                      ...(isSticky
+                        ? {
+                            position: "sticky",
+                            top: stickyTop.get(r),
+                            zIndex: 3,
+                            background: bg || "#fff", // 下の内容が透けないよう不透明に
+                          }
+                        : null),
                     }}
                   >
                     {content}
@@ -145,7 +182,8 @@ export default function SheetGrid({
                 );
               })}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       {hasOverlays && (

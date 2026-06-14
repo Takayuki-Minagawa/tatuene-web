@@ -19,9 +19,37 @@ body {
 /* ===== Excel風グリッド ===== */
 .grid-scroll {
   overflow: auto;
+  /* 親ペイン(main)いっぱいに広げ、縦長・横長どちらのシートでも
+     この枠の内側でスクロールできるようにする */
+  width: 100%;
+  height: 100%;
   max-width: 100%;
+  max-height: 100%;
   border: 1px solid var(--line);
   background: #fff;
+  /* スクロールバーを常時表示（Firefox） */
+  scrollbar-width: auto;
+  scrollbar-color: #9aa0a6 #eceff1;
+}
+/* スクロールバー(スライダー)を常時表示・掴みやすくする（WebKit/Chrome/Safari/Edge）。
+   macOSのオーバーレイ表示だと普段隠れて不便なため、太めの実体バーにする */
+.grid-scroll::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+.grid-scroll::-webkit-scrollbar-track {
+  background: #eceff1;
+}
+.grid-scroll::-webkit-scrollbar-thumb {
+  background: #9aa0a6;
+  border: 3px solid #eceff1;
+  border-radius: 8px;
+}
+.grid-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+.grid-scroll::-webkit-scrollbar-corner {
+  background: #eceff1;
 }
 table.xl-grid {
   border-collapse: collapse;

@@ -9,6 +9,12 @@ import DrawingEditor from "./DrawingEditor";
 
 const EMU = 9525; // 1px = 9525 EMU
 
+// 図面枠の縦長化（A4縦寄り）。元のExcel枠は極端な横長(約5:1)で図面を貼りにくいため、
+// 高さ(行11ラベル〜行27表の手前で固定)はそのままに、幅だけを「高さ ÷ 比率」へ絞る。
+// 上下は触らないので他セル・隣の枠と干渉しない。比率を変えたいときはここを調整。
+const PORTRAIT_SLOT_IDS = new Set(["slot1", "slot2"]); // 現状図・改修図
+const PORTRAIT_RATIO = 1.4; // 高さ ÷ 幅（≒A4縦の縦横比）
+
 export default function SheetOverlays({
   images,
   slots,
@@ -56,12 +62,17 @@ export default function SheetOverlays({
         const top = rowTop[slot.fromRow] + emuPx(slot.fromRowOff);
         const right = colLeft[slot.toCol] + emuPx(slot.toColOff);
         const bottom = rowTop[slot.toRow] + emuPx(slot.toRowOff);
+        const height = Math.max(1, bottom - top);
+        // 縦長化対象は幅を絞る。それ以外は元の枠幅のまま。
+        const width = PORTRAIT_SLOT_IDS.has(slot.id)
+          ? height / PORTRAIT_RATIO
+          : Math.max(1, right - left);
         return (
           <div key={slot.id} style={{ position: "absolute", left, top }}>
             <DrawingEditor
               slot={slot}
-              width={Math.max(1, right - left)}
-              height={Math.max(1, bottom - top)}
+              width={width}
+              height={height}
               editable={interactiveDrawings}
             />
           </div>

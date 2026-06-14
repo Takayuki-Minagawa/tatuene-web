@@ -16,10 +16,12 @@ function VersionInput({
   label,
   value,
   onChange,
+  note,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  note?: string;
 }) {
   return (
     <label className="version-field">
@@ -27,8 +29,9 @@ function VersionInput({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        aria-label={`${label}バージョン`}
+        aria-label={label.includes("バージョン") ? label : `${label}バージョン`}
       />
+      {note && <span className="version-note">{note}</span>}
     </label>
   );
 }
@@ -151,9 +154,10 @@ export default function Home() {
         <div className="version-settings" aria-label="バージョン管理">
           <span className="text-xs opacity-85">Web版</span>
           <VersionInput
-            label="個別"
+            label="管理バージョン"
             value={versionSettings.individual}
             onChange={(individual) => setVersionSettings((v) => ({ ...v, individual }))}
+            note="（PDFには出力されません／保存ファイルに記録されます）"
           />
           <VersionInput
             label="正式"

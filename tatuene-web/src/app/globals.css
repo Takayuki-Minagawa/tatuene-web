@@ -196,6 +196,12 @@ table.xl-grid {
   color: #fff;
   white-space: nowrap;
 }
+.version-note {
+  font-size: 11px;
+  color: #fff;
+  opacity: 0.8;
+  white-space: nowrap;
+}
 .version-field input {
   width: 72px;
   height: 26px;

@@ -62,16 +62,19 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
           として枠の div は常に残す。 */}
       <div id={bodyId} hidden={!open}>
         {open &&
-          (isReftable ? (
-            <RefTable sheet={sheet} region={section.reftable!} />
-          ) : isDrawing ? (
+          (isDrawing ? (
             <PlanDrawing slotId={section.drawingSlotId!} />
           ) : (
-            <div className="form-fields">
-              {section.items.map((it) => (
-                <FormField key={it.addr} sheet={sheet} item={it} />
-              ))}
-            </div>
+            <>
+              {isReftable && <RefTable sheet={sheet} region={section.reftable!} />}
+              {section.items.length > 0 && (
+                <div className={"form-fields" + (isReftable ? " form-fields-result" : "")}>
+                  {section.items.map((it) => (
+                    <FormField key={it.addr} sheet={sheet} item={it} />
+                  ))}
+                </div>
+              )}
+            </>
           ))}
       </div>
     </section>

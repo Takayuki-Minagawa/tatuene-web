@@ -171,13 +171,27 @@ export function parseSheet(
     }
 
     if (sec.reftable) {
+      // reftable に加えて、表の外に出す結果（数式）を読み取りフィールドとして併置できる。
+      // 入力（建材選択）は表で、部位ごとの熱損失などの結果はフィールドで前面に出す。
+      const resultItems: FormItem[] = [];
+      for (const addr of sec.formulas ?? []) {
+        const { row, col } = rc(addr);
+        const ov = getOverride(sec, addr);
+        resultItems.push({
+          addr,
+          kind: "formula",
+          label: ov?.label ?? detectLabel(row, col),
+          unit: ov?.unit ?? detectUnit(row, col),
+          guidance: ov?.guidance,
+        });
+      }
       sections.push({
         id: sec.id,
         title: sec.title,
         defaultOpen: sec.defaultOpen ?? true,
         guidance: resolveGuidance(sec, data),
         kind: "reftable",
-        items: [],
+        items: resultItems,
         reftable: sec.reftable,
       });
       // reftable 範囲内の入力は「割当済み」とみなす（その他へ回収しない）。

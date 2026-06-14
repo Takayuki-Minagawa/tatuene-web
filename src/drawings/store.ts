@@ -12,6 +12,23 @@
 import { useSyncExternalStore } from "react";
 import { clampScale } from "./geometry";
 
+// 取り込み・保存ファイルの画像MIMEは許可リストで検証する（不正な type の流用を防ぐ）。
+const ALLOWED_IMAGE_MIME: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
+};
+/** 許可された画像MIMEならそのまま、なければ image/png にフォールバック。 */
+export function safeImageMime(t?: string): string {
+  return t && ALLOWED_IMAGE_MIME[t] ? t : "image/png";
+}
+/** MIME から安全な拡張子を得る（未知は png）。 */
+export function imageExt(t?: string): string {
+  return (t && ALLOWED_IMAGE_MIME[t]) || "png";
+}
+
 export type Annotation =
   | { id: string; type: "line" | "arrow"; x1: number; y1: number; x2: number; y2: number; color: string; width: number }
   | { id: string; type: "number"; x: number; y: number; value: number; color: string; size: number }
@@ -230,7 +247,7 @@ export function collectMeta(): Record<string, SlotMeta> {
   for (const [id, s] of slots.entries()) {
     const hasContent = s.imageDataUrl || s.annotations.length > 0;
     if (!hasContent) continue;
-    const ext = s.imageType ? s.imageType.split("/")[1] || "png" : "png";
+    const ext = imageExt(s.imageType);
     out[id] = {
       imageName: s.imageName,
       imageType: s.imageType,
@@ -277,7 +294,7 @@ export function collectImages(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [id, s] of slots.entries()) {
     if (!s.imageDataUrl) continue;
-    const ext = s.imageType ? s.imageType.split("/")[1] || "png" : "png";
+    const ext = imageExt(s.imageType);
     out[`assets/${id}.${ext}`] = s.imageDataUrl;
   }
   return out;

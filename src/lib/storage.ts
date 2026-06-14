@@ -11,6 +11,7 @@ import {
   collectImages,
   restore,
   clearAll,
+  safeImageMime,
   type SlotMeta,
 } from "@/drawings/store";
 import {
@@ -98,12 +99,21 @@ export async function loadFile(file: File): Promise<VersionSettings | null> {
     if (!jsonEntry) throw new Error(`バンドル内に ${SAVE_JSON} が見つかりません。`);
     const data = parseSaveJson(await jsonEntry.async("string"));
     const images: Record<string, string> = {};
+    // 信頼できないファイルの暴走（zip bomb 等）に備え、画像枚数と総量に上限を設ける
+    const MAX_IMAGES = 24;
+    const MAX_TOTAL_B64 = 64 * 1024 * 1024; // base64 文字列の合計（≒48MBの画像）
+    let count = 0;
+    let totalB64 = 0;
     for (const m of Object.values(data.drawings ?? {})) {
       if (!m.imageFile) continue;
+      if (++count > MAX_IMAGES) throw new Error("画像の数が多すぎます。ファイルを確認してください。");
       const f = zip.file(m.imageFile);
       if (!f) continue;
       const b64 = await f.async("base64");
-      images[m.imageFile] = `data:${m.imageType || "image/png"};base64,${b64}`;
+      totalB64 += b64.length;
+      if (totalB64 > MAX_TOTAL_B64) throw new Error("画像データが大きすぎます。ファイルを確認してください。");
+      // MIME は許可リストで検証（不正な type の流用を防ぐ）
+      images[m.imageFile] = `data:${safeImageMime(m.imageType)};base64,${b64}`;
     }
     return applyData(data, images);
   } else {

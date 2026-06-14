@@ -142,6 +142,12 @@ export default function Manual({ onClose }: { onClose: () => void }) {
               <strong>📂 読込</strong>で復元できます（画像はZIP内に個別ファイルとして同梱されます）。
               図面のない旧形式のJSONファイルも読み込めます。
             </p>
+            <p className="mt-2 rounded-md p-2" style={{ background: "#fff7ed", border: "1px solid #f0c081" }}>
+              ⚠ 入力は自動でこのブラウザ内（端末内）に一時保存され、次回そのまま続けられます。
+              工事名・施主名などの個人情報が含まれる場合、<strong>共有・公共の端末では他の利用者に残ります</strong>。
+              共有端末を使うときは、作業後に<strong>「↺ 初期化」</strong>で内容を消去してください。
+              （データはサーバーには送信されず、すべてこの端末内に留まります。）
+            </p>
           </Section>
 
           <Section title="７．データチェック">

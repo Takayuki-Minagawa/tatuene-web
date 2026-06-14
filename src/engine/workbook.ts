@@ -85,7 +85,7 @@ export function isError(v: any): v is DetailedCellError {
 }
 
 /** 入力文字列をHF用の値へ（数値文字列→number、空→null、それ以外→文字列/数式）。 */
-function coerce(value: string | number | null): any {
+export function coerce(value: string | number | null): any {
   if (value === null || value === undefined) return null;
   if (typeof value === "number") return value;
   const s = String(value).trim();

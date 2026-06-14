@@ -271,7 +271,9 @@ export default function Home() {
       <main
         ref={mainRef}
         className={
-          "input-guide flex-1 p-3 " +
+          // 評価シートは出力帳票なので「空欄ガイド」のハイライト（黄色＋オレンジ縦線）を出さない。
+          (active === SHEETS.evaluation ? "" : "input-guide ") +
+          "flex-1 p-3 " +
           (getSheetLayout(active) ? "overflow-auto" : "overflow-hidden")
         }
         style={{ background: "#eef0f2" }}

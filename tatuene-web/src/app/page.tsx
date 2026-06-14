@@ -43,6 +43,25 @@ export default function Home() {
   const [versionSettings, setVersionSettings] = useState<VersionSettings>(DEFAULT_VERSION_SETTINGS);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // 表示倍率（縮小・拡大）。シート切替後も維持する。
+  const [scale, setScale] = useState(1);
+  const mainRef = useRef<HTMLElement>(null);
+  const MIN_SCALE = 0.2;
+  const MAX_SCALE = 2;
+  const clampScale = (s: number) =>
+    Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.round(s * 100) / 100));
+  const zoomBy = (delta: number) => setScale((s) => clampScale(s + delta));
+  // 現在のシート全体がペインに収まる倍率を算出して適用（線形なので一発で確定する）
+  function fitToView() {
+    const pane = mainRef.current?.querySelector<HTMLElement>(".grid-scroll");
+    if (!pane || !pane.scrollWidth || !pane.scrollHeight) return;
+    const ratio =
+      Math.min(pane.clientWidth / pane.scrollWidth, pane.clientHeight / pane.scrollHeight) *
+      scale *
+      0.98; // 端の罫線が切れないよう少し余白を残す
+    setScale(clampScale(ratio));
+  }
+
   function flash(m: string) {
     setMsg(m);
     setTimeout(() => setMsg(null), 3500);
@@ -212,6 +231,45 @@ export default function Home() {
             {s}
           </button>
         ))}
+        {/* 表示倍率（縮小・拡大・全体表示・標準に戻す） */}
+        <div className="ml-auto flex items-center gap-1 self-center pr-1 text-xs text-slate-600">
+          <button
+            onClick={() => zoomBy(-0.1)}
+            disabled={scale <= MIN_SCALE}
+            className="w-7 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40"
+            title="縮小"
+            aria-label="縮小"
+          >
+            －
+          </button>
+          <span className="w-12 text-center tabular-nums" aria-live="polite" title="現在の表示倍率">
+            {Math.round(scale * 100)}%
+          </span>
+          <button
+            onClick={() => zoomBy(0.1)}
+            disabled={scale >= MAX_SCALE}
+            className="w-7 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40"
+            title="拡大"
+            aria-label="拡大"
+          >
+            ＋
+          </button>
+          <button
+            onClick={fitToView}
+            className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
+            title="シート全体がペインに収まるように表示"
+          >
+            全体
+          </button>
+          <button
+            onClick={() => setScale(1)}
+            disabled={scale === 1}
+            className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40"
+            title="標準サイズ（100%）に戻す"
+          >
+            100%
+          </button>
+        </div>
         <button
           onClick={() => {
             if (confirm("すべての入力と図面を初期状態に戻します。よろしいですか？")) {
@@ -222,7 +280,7 @@ export default function Home() {
               flash("初期化しました");
             }
           }}
-          className="ml-auto px-3 py-2 text-xs self-center"
+          className="px-3 py-2 text-xs self-center"
           style={{ color: "#666" }}
         >
           ↺ 初期化
@@ -230,13 +288,14 @@ export default function Home() {
       </div>
 
       {/* グリッド */}
-      <main className="flex-1 overflow-hidden p-3" style={{ background: "#eef0f2" }}>
+      <main ref={mainRef} className="flex-1 overflow-hidden p-3" style={{ background: "#eef0f2" }}>
         <SheetGrid
           sheetName={active}
           model={model.sheets[active]}
           faithful={active === "評価シート"}
           interactiveDrawings={active === "評価シート"}
           versionSettings={versionSettings}
+          scale={scale}
         />
       </main>
 

@@ -20,6 +20,12 @@ export interface FitRect {
 export const MIN_SCALE = 0.05;
 export const MAX_SCALE = 10;
 
+/** スケール値を許容範囲に丸める（不正/極端な値での描画破綻を防ぐ） */
+export function clampScale(s: number): number {
+  if (!Number.isFinite(s)) return 1;
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
+}
+
 /** 画像を箱に contain フィットしたときの寸法と左上座標 */
 export function fitContain(natW: number, natH: number, boxW: number, boxH: number): FitRect {
   if (!natW || !natH) return { w: boxW, h: boxH, x: 0, y: 0 };

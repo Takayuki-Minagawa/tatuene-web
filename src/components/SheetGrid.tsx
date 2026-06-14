@@ -76,6 +76,20 @@ export default function SheetGrid({
     ? new Set(model.inputs.map((i) => i.row))
     : null;
 
+  // 入力モードの結合表示: 縦結合は平坦化（隠れ行をまたぐ崩れを防ぐ）しつつ、
+  // 横結合(colSpan)だけは保持して見出しが列割れしないようにする。
+  const hSpan = new Map<string, number>(); // アンカーkey → colSpan
+  const hCovered = new Set<string>(); // 同一行で横結合に覆われるセル
+  if (useInputOnly) {
+    for (const [key, { cs }] of anchors) {
+      if (cs > 1) {
+        const [ar, ac] = key.split(",").map(Number);
+        hSpan.set(key, cs);
+        for (let cc = ac + 1; cc < ac + cs; cc++) hCovered.add(`${ar},${cc}`);
+      }
+    }
+  }
+
   // 見出し固定: 対象行の上端オフセットを積み上げて算出（図面あり・入力モードでは無効）
   const stickyRows = hasOverlays || useInputOnly ? [] : STICKY_HEADER_ROWS[sheetName] ?? [];
   const stickyTop = new Map<number, number>();
@@ -106,8 +120,11 @@ export default function SheetGrid({
             <tr key={r} style={hasOverlays ? { height: rowPx[r] } : undefined}>
               {Array.from({ length: model.maxCol }, (_, c) => {
                 const key = `${r},${c}`;
-                if (!useInputOnly && covered.has(key)) return null;
-                const span = useInputOnly ? undefined : anchors.get(key);
+                if (useInputOnly ? hCovered.has(key) : covered.has(key)) return null;
+                // 入力モードでは横結合のみ colSpan として反映（rowSpan は付けない）
+                const span = useInputOnly
+                  ? (hSpan.has(key) ? { rs: 1, cs: hSpan.get(key)! } : undefined)
+                  : anchors.get(key);
                 const addr = addrOf(r, c);
                 const sid = model.styles[r]?.[c] ?? -1;
                 const st = sid >= 0 ? model.styleTable[sid] : null;

@@ -150,8 +150,12 @@ export class WorkbookEngine {
   /** 入力セルの現在値（生のまま、表示/編集用） */
   getInputRaw(sheet: string, a1: string): any {
     const { row, col } = a1ToRC(a1);
-    // 入力セルは数式でないので getCellValue がそのまま生値を返す
-    return this.hf.getCellValue({ sheet: this.sheetId(sheet), row, col });
+    const addr = { sheet: this.sheetId(sheet), row, col };
+    // 入力欄にユーザーが数式(=...)を入れた場合は評価値ではなく原文を返す。
+    // 評価値を返すと保存往復で原文が失われ、再表示も値に化けてしまうため。
+    const formula = this.hf.getCellFormula(addr);
+    if (formula !== undefined) return formula;
+    return this.hf.getCellValue(addr);
   }
 
   /** 全入力欄の現在値を {"シート!セル": 値} で取得（JSON保存用、空は除外） */
@@ -170,26 +174,31 @@ export class WorkbookEngine {
 
   /** すべての入力欄を既定値に戻す */
   resetToDefaults(): void {
-    for (const name of model.sheetOrder) {
-      for (const inp of model.sheets[name].inputs) {
-        this.setInput(name, inp.addr, (inp.default ?? null) as any);
+    // batch でまとめて適用し、再計算を最後の1回に集約（セル毎の全再計算を回避）
+    this.hf.batch(() => {
+      for (const name of model.sheetOrder) {
+        for (const inp of model.sheets[name].inputs) {
+          this.setInput(name, inp.addr, (inp.default ?? null) as any);
+        }
       }
-    }
+    });
   }
 
   /** JSONの inputs を反映（まず全消去→既定→上書き） */
   applyInputs(inputs: Record<string, string | number>): void {
-    for (const name of model.sheetOrder) {
-      for (const inp of model.sheets[name].inputs) {
-        this.setInput(name, inp.addr, null);
+    this.hf.batch(() => {
+      for (const name of model.sheetOrder) {
+        for (const inp of model.sheets[name].inputs) {
+          this.setInput(name, inp.addr, null);
+        }
       }
-    }
-    for (const [key, val] of Object.entries(inputs)) {
-      const idx = key.indexOf("!");
-      const sheet = key.slice(0, idx);
-      const addr = key.slice(idx + 1);
-      if (this.sheetIds.has(sheet)) this.setInput(sheet, addr, val);
-    }
+      for (const [key, val] of Object.entries(inputs)) {
+        const idx = key.indexOf("!");
+        const sheet = key.slice(0, idx);
+        const addr = key.slice(idx + 1);
+        if (this.sheetIds.has(sheet)) this.setInput(sheet, addr, val);
+      }
+    });
   }
 }
 

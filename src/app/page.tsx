@@ -77,13 +77,14 @@ export default function Home() {
         engine().getInputRaw(active, i.addr),
       ),
   ).length;
-  const jumpIdx = useRef(0);
   function jumpNextEmpty() {
-    const nodes = mainRef.current?.querySelectorAll<HTMLElement>('[data-empty="1"]');
-    if (!nodes || nodes.length === 0) return;
-    const i = jumpIdx.current % nodes.length;
-    jumpIdx.current = i + 1;
-    const el = nodes[i];
+    const root = mainRef.current;
+    if (!root) return;
+    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-empty="1"]'));
+    if (nodes.length === 0) return;
+    // 現在フォーカス中の空欄の「次」へ。空欄数が変動してもズレないよう毎回探索する。
+    const cur = nodes.indexOf(document.activeElement as HTMLElement);
+    const el = nodes[(cur + 1) % nodes.length]; // cur=-1（未フォーカス）なら先頭へ
     el.scrollIntoView({ block: "center", inline: "center" });
     el.focus();
   }

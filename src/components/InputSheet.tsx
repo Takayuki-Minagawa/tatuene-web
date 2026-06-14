@@ -19,7 +19,10 @@ export default function InputSheet({ sheetName }: { sheetName: string }) {
     <div className="input-form">
       <h1 className="input-form-title">{sheetName}</h1>
       {form.sections.map((s) => (
-        <FormSection key={s.id} sheet={sheetName} section={s} />
+        // シートごとにスコープしたキー。シートを切り替えると再マウントされ、
+        // 各レイアウトの defaultOpen が正しく適用される（現状/改修後の同名
+        // セクションで開閉状態が共有されるのを防ぐ）。
+        <FormSection key={`${sheetName}:${s.id}`} sheet={sheetName} section={s} />
       ))}
     </div>
   );

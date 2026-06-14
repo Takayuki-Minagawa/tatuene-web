@@ -54,16 +54,20 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
       {section.guidance && showHelp && (
         <p className="form-section-help">{section.guidance}</p>
       )}
+      {/* 折りたたみ中は中身をマウントしない（不可視の入力欄へキーボード移動が
+          飛ぶのを防ぐ／参照表の常駐描画コストも避ける）。aria-controls の参照先
+          として枠の div は常に残す。 */}
       <div id={bodyId} hidden={!open}>
-        {section.kind === "reftable" && section.reftable ? (
-          <RefTable sheet={sheet} region={section.reftable} />
-        ) : (
-          <div className="form-fields">
-            {section.items.map((it) => (
-              <FormField key={it.addr} sheet={sheet} item={it} />
-            ))}
-          </div>
-        )}
+        {open &&
+          (section.kind === "reftable" && section.reftable ? (
+            <RefTable sheet={sheet} region={section.reftable} />
+          ) : (
+            <div className="form-fields">
+              {section.items.map((it) => (
+                <FormField key={it.addr} sheet={sheet} item={it} />
+              ))}
+            </div>
+          ))}
       </div>
     </section>
   );

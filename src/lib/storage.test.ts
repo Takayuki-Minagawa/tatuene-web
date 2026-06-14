@@ -27,6 +27,16 @@ describe("storage 保存→反映の往復", () => {
     expect(engine().getInputRaw(SHEET, ADDR)).toBe("RT_TEST_値");
   });
 
+  it("入力欄に数式(=...)を入れても原文が保存・復元される（評価値に化けない）", () => {
+    setInput(SHEET, ADDR, "=1+2");
+    const saved = buildSaveFile();
+    expect(saved.inputs[KEY]).toBe("=1+2"); // "3" ではなく原文
+
+    resetDefaults();
+    applyData(saved, {});
+    expect(engine().getInputRaw(SHEET, ADDR)).toBe("=1+2");
+  });
+
   it("applyData は逹エネ保存データでないと例外を投げる", () => {
     const bad = { app: "other-app", inputs: {} } as unknown as SaveFile;
     expect(() => applyData(bad, {})).toThrow();

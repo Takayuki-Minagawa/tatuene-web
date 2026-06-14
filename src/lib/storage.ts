@@ -96,7 +96,7 @@ export async function loadFile(file: File): Promise<VersionSettings | null> {
     const zip = await JSZip.loadAsync(file);
     const jsonEntry = zip.file(SAVE_JSON) ?? zip.file(LEGACY_SAVE_JSON);
     if (!jsonEntry) throw new Error(`バンドル内に ${SAVE_JSON} が見つかりません。`);
-    const data = JSON.parse(await jsonEntry.async("string")) as SaveFile;
+    const data = parseSaveJson(await jsonEntry.async("string"));
     const images: Record<string, string> = {};
     for (const m of Object.values(data.drawings ?? {})) {
       if (!m.imageFile) continue;
@@ -107,7 +107,16 @@ export async function loadFile(file: File): Promise<VersionSettings | null> {
     }
     return applyData(data, images);
   } else {
-    const data = JSON.parse(await file.text()) as SaveFile;
+    const data = parseSaveJson(await file.text());
     return applyData(data, {});
+  }
+}
+
+/** 保存JSONをパース。壊れている場合はユーザー向けの日本語メッセージにする。 */
+function parseSaveJson(text: string): SaveFile {
+  try {
+    return JSON.parse(text) as SaveFile;
+  } catch {
+    throw new Error("ファイルが壊れているか、対応していない形式です（データを読み取れませんでした）。");
   }
 }

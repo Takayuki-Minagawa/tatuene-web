@@ -10,6 +10,7 @@
  * 保存時はZIP内の個別ファイル(assets/<slotId>.<ext>)へ書き出す（JSONには埋め込まない）。
  */
 import { useSyncExternalStore } from "react";
+import { clampScale } from "./geometry";
 
 export type Annotation =
   | { id: string; type: "line" | "arrow"; x1: number; y1: number; x2: number; y2: number; color: string; width: number }
@@ -177,6 +178,8 @@ export function setTransform(id: string, patch: Partial<ImageTransform>) {
   commitPending(id);
   const s = getSlot(id);
   s.transform = { ...s.transform, ...patch };
+  // scale は常に許容範囲に丸める（改竄/旧形式JSON/誤操作での描画破綻を防ぐ）
+  if (patch.scale !== undefined) s.transform.scale = clampScale(s.transform.scale);
   emit();
 }
 
@@ -252,13 +255,15 @@ export function restore(meta: Record<string, SlotMeta>, images: Record<string, s
       const mm = /^a(\d+)$/.exec(a.id);
       if (mm) maxSeq = Math.max(maxSeq, Number(mm[1]));
     }
+    const transform = { ...DEFAULT_TRANSFORM, ...(m.transform ?? {}) };
+    transform.scale = clampScale(transform.scale); // 旧/改竄JSONの極端なscaleを丸める
     slots.set(id, {
       imageDataUrl: m.imageFile ? images[m.imageFile] : undefined,
       imageName: m.imageName,
       imageType: m.imageType,
       natW: m.natW,
       natH: m.natH,
-      transform: { ...DEFAULT_TRANSFORM, ...(m.transform ?? {}) },
+      transform,
       annotations,
     });
   }

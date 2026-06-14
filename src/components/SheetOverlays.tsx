@@ -6,6 +6,7 @@
 import React from "react";
 import type { DrawingSlot, ImageAnchor } from "@/engine/workbook";
 import DrawingEditor from "./DrawingEditor";
+import { PLAN_COPY_SLOT_IDS, PLAN_AUTHOR_W, PLAN_AUTHOR_H } from "@/drawings/planFrame";
 
 const EMU = 9525; // 1px = 9525 EMU
 
@@ -63,6 +64,37 @@ export default function SheetOverlays({
         const right = colLeft[slot.toCol] + emuPx(slot.toColOff);
         const bottom = rowTop[slot.toRow] + emuPx(slot.toRowOff);
         const height = Math.max(1, bottom - top);
+
+        // 間取り図のコピー枠（現状図/改修図）: 計算シートの作図（基準 W×H）を、
+        // セル枠の高さに合わせて一括縮小し読み取り専用で焼き込む。基準は A4縦比
+        // なので縦長のセル枠へ等倍で収まり、画像・注釈とも寸分違わぬコピーになる。
+        // 編集は計算シートの「間取り図」側で行う。
+        if (PLAN_COPY_SLOT_IDS.has(slot.id)) {
+          // height はシート表示倍率(scale)反映済みなので、コピーもズームに追従する。
+          const s = height / PLAN_AUTHOR_H;
+          const width = PLAN_AUTHOR_W * s;
+          return (
+            <div
+              key={slot.id}
+              style={{ position: "absolute", left, top, width, height, overflow: "hidden" }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  width: PLAN_AUTHOR_W,
+                  height: PLAN_AUTHOR_H,
+                  transform: `scale(${s})`,
+                  transformOrigin: "top left",
+                }}
+              >
+                <DrawingEditor slot={slot} width={PLAN_AUTHOR_W} height={PLAN_AUTHOR_H} editable={false} />
+              </div>
+            </div>
+          );
+        }
+
         // 縦長化対象は幅を絞る。それ以外は元の枠幅のまま。
         const width = PORTRAIT_SLOT_IDS.has(slot.id)
           ? height / PORTRAIT_RATIO

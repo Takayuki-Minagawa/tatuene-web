@@ -6,6 +6,7 @@
 import React, { useId, useMemo, useState } from "react";
 import FormField from "./FormField";
 import RefTable from "./RefTable";
+import PlanDrawing from "./PlanDrawing";
 import { engine, useEngineVersion } from "@/engine/store";
 import type { FormSection as Section } from "@/lib/sheet-parser";
 
@@ -27,8 +28,9 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
   }, [version, sheet, section]);
 
   const isReftable = section.kind === "reftable" && !!section.reftable;
+  const isDrawing = section.kind === "drawing" && !!section.drawingSlotId;
   return (
-    <section className={"form-section" + (isReftable ? " is-reftable" : "")}>
+    <section className={"form-section" + (isReftable ? " is-reftable" : "") + (isDrawing ? " is-drawing" : "")}>
       <div className="form-section-head">
         <button
           type="button"
@@ -62,6 +64,8 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
         {open &&
           (isReftable ? (
             <RefTable sheet={sheet} region={section.reftable!} />
+          ) : isDrawing ? (
+            <PlanDrawing slotId={section.drawingSlotId!} />
           ) : (
             <div className="form-fields">
               {section.items.map((it) => (

@@ -90,7 +90,9 @@ export default function Manual({ onClose }: { onClose: () => void }) {
             <p className="mt-2">
               入力シートは項目ごとのセクションに分かれています。見出しをクリックすると
               開閉でき、<strong>「解説▼」</strong>を押すとその項目・セクションの説明が表示されます。
-              間取り図や各部の熱損失計算など横に広い表は、枠内を左右にスクロールできます。
+              各部の熱損失計算など横に広い表は、枠内を左右にスクロールできます。
+              <strong>間取り図</strong>は図面画像を取り込んで注釈でき、その内容は
+              評価シートの<strong>現状図／改修図</strong>に自動で反映されます。
             </p>
           </Section>
 
@@ -129,8 +131,11 @@ export default function Manual({ onClose }: { onClose: () => void }) {
 
           <Section title="５．図面の挿入（現状図・改修図）">
             <p>
-              評価シートの<strong>◇現状図／◇改修図</strong>、および下部の図枠には、
-              <strong>図面画像をアップロードして配置・注釈</strong>できます。出力するPDF帳票にもそのまま反映されます。
+              <strong>現状図</strong>は<strong>計算シート（現状）の「間取り図」</strong>、
+              <strong>改修図</strong>は<strong>計算シート（改修後）の「間取り図」</strong>で作成します。
+              枠に<strong>図面画像をアップロードして配置・注釈</strong>すると、その内容が
+              評価シートの◇現状図／◇改修図に<strong>自動でコピー表示</strong>され、出力するPDF帳票にもそのまま反映されます。
+              （評価シート下部の図枠は、評価シート上で直接アップロード・注釈できます。）
             </p>
             <ul className="list-disc pl-5 space-y-0.5">
               <li><strong>画像</strong>：図面（写真・スキャン等）をアップロードします。枠に合わせて自動配置されます。</li>

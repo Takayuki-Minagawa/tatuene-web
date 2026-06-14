@@ -103,3 +103,30 @@ describe("parseSheet — 表紙の構成", () => {
     expect(byId["about"].guidance).toContain("このシミュレーター");
   });
 });
+
+describe("parseSheet — 間取り図（図面セクション）", () => {
+  const cases: [string, string][] = [
+    [SHEETS.currentCalc, "slot1"],
+    [SHEETS.retrofitCalc, "slot2"],
+  ];
+  for (const [sheet, slotId] of cases) {
+    it(`${sheet}: plan は drawing セクションで ${slotId} を共有する`, () => {
+      const form = parseSheet(sheet, model.sheets[sheet], getSheetLayout(sheet));
+      const plan = form.sections.find((s) => s.id === "plan")!;
+      expect(plan.kind).toBe("drawing");
+      expect(plan.drawingSlotId).toBe(slotId);
+      expect(plan.items).toEqual([]); // 作図セルはフォーム項目化しない
+    });
+
+    it(`${sheet}: 作図グリッドのセルが「その他」に漏れない`, () => {
+      const form = parseSheet(sheet, model.sheets[sheet], getSheetLayout(sheet));
+      const rest = form.sections.find((s) => s.id === "__rest__");
+      // 41〜65行(作図グリッド)の番地が項目に出ていないこと
+      const restAddrs = (rest?.items ?? []).map((i) => i.addr);
+      for (const a of restAddrs) {
+        const row = Number(/\d+/.exec(a)![0]);
+        expect(row < 41 || row > 65, `作図セルが その他 に漏れた: ${a}`).toBe(true);
+      }
+    });
+  }
+});

@@ -7,6 +7,11 @@ on:
   # Actions タブから手動実行も可能にする
   workflow_dispatch:
 
+# バンドル版アクション（checkout 等）は既に最新メジャーだが Node 20 ランタイムで動く。
+# Node 24 ランタイムに切り替えて非推奨警告を解消する（2026-06-16 以降は既定）。
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # GITHUB_TOKEN に Pages へのデプロイ権限を付与
 permissions:
   contents: read

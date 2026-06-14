@@ -162,7 +162,11 @@ function SheetGrid({
                   : {};
 
                 let content: React.ReactNode = null;
-                if (isInput) {
+                if (isInput && faithful) {
+                  // 帳票(評価シート/PDF)では入力セルも「書式付きの表示値」を読み取りで表示。
+                  // 生値（例: 215000）のはみ出しを防ぎ、空の入力セルは白紙になる。
+                  content = <FormulaCell sheet={sheetName} addr={addr} />;
+                } else if (isInput) {
                   // 数値セル判定（decimalキーパッド用）と、SR向けラベル（同じ行で左隣の見出し文字）
                   const fmt = st?.fmt;
                   const numeric =
@@ -211,7 +215,7 @@ function SheetGrid({
                       verticalAlign: st?.v === "center" ? "middle" : "middle",
                       background: bg,
                       color: !faithful && isFormula ? "#14418a" : st?.color || undefined,
-                      padding: isInput ? 0 : "1px 3px",
+                      padding: isInput && !faithful ? 0 : "1px 3px",
                       ...borderStyle,
                       ...(isSticky
                         ? {

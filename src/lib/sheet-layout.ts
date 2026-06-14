@@ -113,8 +113,75 @@ export const SHEET_LAYOUTS: Record<string, SheetLayout> = {
       },
     ],
   },
+
+  [SHEETS.currentCalc]: { sections: calcSections("現状") },
+  [SHEETS.retrofitCalc]: { sections: calcSections("改修後") },
 };
 
 export function getSheetLayout(sheetName: string): SheetLayout | undefined {
   return SHEET_LAYOUTS[sheetName];
+}
+
+/**
+ * 計算シート（現状／改修後）のセクション構成。
+ * 基本データは入力欄（フォーム）で目立たせ、間取り図グリッドと各熱損失計算の
+ * ■セクションは横スクロール可能な折りたたみ参照表として 1:1 に保持する。
+ * シートで行範囲・最終列が異なるため variant で切り替える。
+ */
+function calcSections(variant: "現状" | "改修後"): SectionConfig[] {
+  if (variant === "現状") {
+    const C = 18; // 最終列 index（S列…実データは A〜Q）
+    return [
+      {
+        id: "basic",
+        title: "基本データ",
+        defaultOpen: true,
+        rows: [9, 17],
+        guidanceRows: [20, 38],
+        guidanceCol: 8, // I列の「◇記入上の注意」
+      },
+      sec("openings", "開口部（窓・外部ドア・室内ドア）", 18, 40, C, false),
+      sec("plan", "間取り図", 41, 65, C, false,
+        "セルに色や記号を入れて間取りを描くための作図エリアです。"),
+      sec("walls", "壁部からの熱損失計算", 66, 123, C, false),
+      sec("roof", "屋根からの熱損失計算", 124, 146, C, false),
+      sec("ceiling", "天井からの熱損失計算", 147, 168, C, false),
+      sec("floor", "床からの熱損失計算", 169, 190, C, false),
+      sec("windows", "窓・ドアからの熱損失計算", 191, 229, C, false),
+      sec("gaps", "隙間からの熱損失・日射取得率", 230, 287, C, false),
+    ];
+  }
+  const C = 17; // 改修後は A〜R（最終列 index 17）
+  return [
+    sec("basic", "基本データ・断熱改修面積・開口部", 9, 40, C, true,
+      "白いセルに入力します。断熱改修する部位の面積を【断熱改修面積】に記入してください（面積が空欄だと建材を選んでも計算に反映されません）。"),
+    sec("plan", "間取り図・改修部分図", 41, 64, C, false,
+      "セルに色や記号を入れて間取り・改修部分を描くための作図エリアです。"),
+    sec("walls", "壁部からの熱損失計算", 65, 156, C, false),
+    sec("roof", "屋根からの熱損失計算", 157, 181, C, false),
+    sec("ceiling", "天井からの熱損失計算", 182, 205, C, false),
+    sec("floor", "床からの熱損失計算", 206, 229, C, false),
+    sec("windows", "窓・ドアからの熱損失計算", 230, 272, C, false),
+    sec("gaps", "隙間からの熱損失・日射取得率", 273, 331, C, false),
+  ];
+}
+
+/** 全幅の折りたたみ参照表セクションを作る簡易ヘルパー。 */
+function sec(
+  id: string,
+  title: string,
+  fromRow: number,
+  toRow: number,
+  toCol: number,
+  defaultOpen: boolean,
+  guidance?: string,
+): SectionConfig {
+  return {
+    id,
+    title,
+    defaultOpen,
+    guidance,
+    // reftable は 0始まり・含む。行範囲は 1始まりで受け取り変換。
+    reftable: { fromRow: fromRow - 1, toRow: toRow - 1, fromCol: 0, toCol },
+  };
 }

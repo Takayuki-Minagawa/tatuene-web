@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+// テスト公開期間中のみの簡易パスワードゲート（取り外し方は PasswordGate.tsx 参照）
+import PasswordGate from "@/components/PasswordGate";
 
 export const metadata: Metadata = {
   title: "逹エネ断熱シミュレーター Web版",
@@ -14,7 +16,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <PasswordGate>{children}</PasswordGate>
+      </body>
     </html>
   );
 }

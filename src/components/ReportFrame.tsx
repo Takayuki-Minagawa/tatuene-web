@@ -4,6 +4,7 @@ import React from "react";
 import SheetGrid from "./SheetGrid";
 import { engine } from "@/engine/store";
 import { DEFAULT_VERSION_SETTINGS, type VersionSettings } from "@/lib/version";
+import { SHEETS } from "@/lib/sheets";
 
 export const REPORT_FRAME_ID = "report-frame";
 
@@ -12,7 +13,7 @@ export default function ReportFrame({
 }: {
   versionSettings?: VersionSettings;
 }) {
-  const model = engine().model.sheets["評価シート"];
+  const model = engine().model.sheets[SHEETS.evaluation];
   return (
     <div
       id={REPORT_FRAME_ID}
@@ -26,7 +27,7 @@ export default function ReportFrame({
       }}
       aria-hidden
     >
-      <SheetGrid sheetName="評価シート" model={model} faithful versionSettings={versionSettings} />
+      <SheetGrid sheetName={SHEETS.evaluation} model={model} faithful versionSettings={versionSettings} />
     </div>
   );
 }

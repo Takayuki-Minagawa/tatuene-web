@@ -17,13 +17,14 @@ import {
   coverVersionLabel,
   type VersionSettings,
 } from "@/lib/version";
+import { SHEETS } from "@/lib/sheets";
 
 const BORDER = "1px solid #9aa0a6";
 
 // 見出し固定の対象行（0始まりインデックス）。スクロールしても画面上部に貼り付く。
 // 列見出しが中段にある表のみ設定（先頭からの連続行でなくてよい）。
 const STICKY_HEADER_ROWS: Record<string, number[]> = {
-  部材性能シート: [9, 10], // 「建材／熱抵抗値…」と単位の2行
+  [SHEETS.materials]: [9, 10], // 「建材／熱抵抗値…」と単位の2行
 };
 
 /** 数式セルの表示値。そのセルの表示文字列だけを購読し、変化時のみ再描画する。 */
@@ -193,7 +194,7 @@ function SheetGrid({
                   );
                 } else if (isFormula) {
                   content = <FormulaCell sheet={sheetName} addr={addr} />;
-                } else if (sheetName === "表紙" && addr === "B18") {
+                } else if (sheetName === SHEETS.cover && addr === "B18") {
                   content = coverVersionLabel(versionSettings);
                 } else if (raw !== null && raw !== undefined) {
                   content = String(raw);

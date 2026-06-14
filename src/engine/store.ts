@@ -4,11 +4,12 @@
  * 入力変更で version を進め、購読中のコンポーネントを再描画する。
  */
 import { useSyncExternalStore } from "react";
-import { getEngine, WorkbookEngine } from "./workbook";
+import { WorkbookEngine } from "./workbook";
 
+// 計算エンジンのシングルトンはここで一元管理する。
 let _engine: WorkbookEngine | null = null;
 export function engine(): WorkbookEngine {
-  if (!_engine) _engine = getEngine();
+  if (!_engine) _engine = new WorkbookEngine();
   return _engine;
 }
 

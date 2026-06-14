@@ -71,6 +71,27 @@ export interface WorkbookModelJson {
 
 const model = modelJson as unknown as WorkbookModelJson;
 
+// 抽出データ（別運用の extract-workbook.py 生成物）の最小限の形式検証。
+// 契約がズレた場合に、UI の不可解な失敗ではなく原因の分かる例外で早期に落とす。
+function assertModelShape(m: WorkbookModelJson): void {
+  if (!m || !Array.isArray(m.sheetOrder) || typeof m.sheets !== "object" || m.sheets === null) {
+    throw new Error("workbook-model.json の形式が不正です（sheetOrder / sheets）。");
+  }
+  for (const name of m.sheetOrder) {
+    const s = m.sheets[name];
+    if (!s) throw new Error(`workbook-model.json: シート「${name}」が欠落しています。`);
+    if (
+      typeof s.maxRow !== "number" ||
+      typeof s.maxCol !== "number" ||
+      !Array.isArray(s.data) ||
+      !Array.isArray(s.inputs)
+    ) {
+      throw new Error(`workbook-model.json: シート「${name}」の構造が不正です。`);
+    }
+  }
+}
+assertModelShape(model);
+
 /** "A1" → {row, col}（0始まり） */
 export function a1ToRC(a1: string): { row: number; col: number } {
   const m = /^([A-Z]+)(\d+)$/.exec(a1);
@@ -233,8 +254,4 @@ export function formatByNumFmt(value: number, fmt: string): string {
   return s;
 }
 
-let _engine: WorkbookEngine | null = null;
-export function getEngine(): WorkbookEngine {
-  if (!_engine) _engine = new WorkbookEngine();
-  return _engine;
-}
+// シングルトンの保持は store.ts に一元化した（ここではクラスのみ提供）。

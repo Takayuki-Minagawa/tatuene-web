@@ -3,6 +3,7 @@
  * エラー(出力ブロック) と 警告(確認の上で出力可) に分類。
  */
 import { WorkbookEngine, isError } from "./workbook";
+import { SHEETS } from "@/lib/sheets";
 
 export interface Issue {
   level: "error" | "warning";
@@ -87,13 +88,13 @@ export function validate(eng: WorkbookEngine): Issue[] {
   ];
   const reqAllFilled = !issues.some((i) => i.level === "error");
   for (const h of headline) {
-    const v = eng.getValue("評価シート", h.addr);
+    const v = eng.getValue(SHEETS.evaluation, h.addr);
     if (isError(v)) {
       issues.push({
         level: "warning",
         label: h.label,
         message: `${h.label}が計算エラー(${v.value})です。建材の選択と各部の面積入力をご確認ください。`,
-        sheet: "評価シート",
+        sheet: SHEETS.evaluation,
         addr: h.addr,
       });
     } else if (reqAllFilled && h.addr === "Y35" && (v === null || v === 0)) {
@@ -102,7 +103,7 @@ export function validate(eng: WorkbookEngine): Issue[] {
         label: h.label,
         message:
           "総熱損失量（現状）が0です。各部の建材選択・面積・開口部の入力が不足している可能性があります。",
-        sheet: "評価シート",
+        sheet: SHEETS.evaluation,
         addr: h.addr,
       });
     }

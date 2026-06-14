@@ -1,17 +1,19 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import SheetGrid from "@/components/SheetGrid";
 import CheckPanel from "@/components/CheckPanel";
 import Manual from "@/components/Manual";
 import ReportFrame, { REPORT_FRAME_ID } from "@/components/ReportFrame";
-import { engine, resetDefaults, useEngineVersion } from "@/engine/store";
+import { engine, resetDefaults } from "@/engine/store";
 import { clearAll as clearDrawings } from "@/drawings/store";
-import { downloadBundle, loadFile, applyData } from "@/lib/storage";
-import { useDraftAutosave, loadDraft, clearDraft, skipNextAutosave } from "@/lib/autosave";
+import { downloadBundle, loadFile } from "@/lib/storage";
+import { useDraftAutosave, clearDraft, skipNextAutosave } from "@/lib/autosave";
 import { validate, type Issue } from "@/engine/validate";
 import { exportReportPdf } from "@/lib/pdf";
 import { DEFAULT_VERSION_SETTINGS, type VersionSettings } from "@/lib/version";
+import { SHEETS } from "@/lib/sheets";
+import { useZoom, useEmptyJump, useDraftRestore } from "./hooks";
 
 function VersionInput({
   label,
@@ -47,84 +49,26 @@ export default function Home() {
   const [versionSettings, setVersionSettings] = useState<VersionSettings>(DEFAULT_VERSION_SETTINGS);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // 表示倍率（縮小・拡大）。シート切替後も維持する。
-  const [scale, setScale] = useState(1);
+  // 表示倍率（縮小・拡大・全体フィット）
   const mainRef = useRef<HTMLElement>(null);
-  const MIN_SCALE = 0.2;
-  const MAX_SCALE = 2;
-  const clampScale = (s: number) =>
-    Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.round(s * 100) / 100));
-  const zoomBy = (delta: number) => setScale((s) => clampScale(s + delta));
-  // 現在のシート全体がペインに収まる倍率を算出して適用（線形なので一発で確定する）
-  function fitToView() {
-    const pane = mainRef.current?.querySelector<HTMLElement>(".grid-scroll");
-    if (!pane || !pane.scrollWidth || !pane.scrollHeight) return;
-    const ratio =
-      Math.min(pane.clientWidth / pane.scrollWidth, pane.clientHeight / pane.scrollHeight) *
-      scale *
-      0.98; // 端の罫線が切れないよう少し余白を残す
-    setScale(clampScale(ratio));
-  }
+  const { scale, setScale, zoomBy, fitToView, MIN_SCALE, MAX_SCALE } = useZoom(mainRef);
 
   // PDF生成時のみ帳票(評価シート)をマウントする
   const [reportMounted, setReportMounted] = useState(false);
 
   // 入力モード（入力欄を含む行だけ表示）と、未入力(空欄)の可視化・ジャンプ
   const [inputOnly, setInputOnly] = useState(false);
-  const version = useEngineVersion(); // 入力で空欄数が変わるのでヘッダー表示を再描画購読
   const sheetModel = model.sheets[active];
-  // アクティブシートの空欄数。シート・入力内容が変わったときだけ再計算する。
-  const emptyCount = useMemo(() => {
-    const dropdowns = new Set(sheetModel.dropdownCells);
-    const isBlank = (v: unknown) =>
-      v === null || v === undefined || String(v).trim() === "";
-    return sheetModel.inputs.filter(
-      (i) => !dropdowns.has(i.addr) && isBlank(engine().getInputRaw(active, i.addr)),
-    ).length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [version, active, sheetModel]);
-  function jumpNextEmpty() {
-    const root = mainRef.current;
-    if (!root) return;
-    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-empty="1"]'));
-    if (nodes.length === 0) return;
-    // 現在フォーカス中の空欄の「次」へ。空欄数が変動してもズレないよう毎回探索する。
-    const cur = nodes.indexOf(document.activeElement as HTMLElement);
-    const el = nodes[(cur + 1) % nodes.length]; // cur=-1（未フォーカス）なら先頭へ
-    el.scrollIntoView({ block: "center", inline: "center" });
-    el.focus();
-  }
+  const { emptyCount, jumpNextEmpty } = useEmptyJump(mainRef, active, sheetModel);
 
   function flash(m: string) {
     setMsg(m);
     setTimeout(() => setMsg(null), 3500);
   }
 
-  // 編集内容のドラフト自動保存（再読込・クラッシュ対策）と起動時の復元確認
+  // ドラフト自動保存と、起動時の復元確認
   useDraftAutosave(versionSettings);
-  const draftChecked = useRef(false);
-  useEffect(() => {
-    if (draftChecked.current) return;
-    draftChecked.current = true;
-    void (async () => {
-      const draft = await loadDraft();
-      if (!draft) return;
-      const when = draft.data.savedAt ? new Date(draft.data.savedAt).toLocaleString("ja-JP") : "日時不明";
-      if (confirm(`前回の編集データが残っています（${when}）。復元しますか？`)) {
-        try {
-          const vs = applyData(draft.data, draft.images);
-          if (vs) setVersionSettings(vs);
-          flash("前回の編集を復元しました");
-        } catch (err) {
-          // 壊れたドラフトは破棄する。残すと次回起動でも同じ復元で失敗し続けるため。
-          clearDraft();
-          flash("復元に失敗したため、残っていた編集データを破棄しました: " + (err instanceof Error ? err.message : String(err)));
-        }
-      } else {
-        clearDraft();
-      }
-    })();
-  }, []);
+  useDraftRestore({ onVersionSettings: setVersionSettings, flash });
 
   function runCheck() {
     setIssues(validate(engine()));
@@ -142,7 +86,7 @@ export default function Home() {
       );
       const node = document.getElementById(REPORT_FRAME_ID);
       if (!node) throw new Error("帳票が見つかりません");
-      const title = (engine().getInputRaw("表紙", "E30") as string) || "診断";
+      const title = (engine().getInputRaw(SHEETS.cover, "E30") as string) || "診断";
       await exportReportPdf(node, title);
       flash("PDF帳票を保存しました");
     } catch (e: any) {
@@ -360,8 +304,8 @@ export default function Home() {
         <SheetGrid
           sheetName={active}
           model={model.sheets[active]}
-          faithful={active === "評価シート"}
-          interactiveDrawings={active === "評価シート"}
+          faithful={active === SHEETS.evaluation}
+          interactiveDrawings={active === SHEETS.evaluation}
           versionSettings={versionSettings}
           scale={scale}
           inputOnly={inputOnly}

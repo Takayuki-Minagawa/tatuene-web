@@ -37,7 +37,7 @@ describe("storage 保存→反映の往復", () => {
     expect(engine().getInputRaw(SHEET, ADDR)).toBe("=1+2");
   });
 
-  it("applyData は逹エネ保存データでないと例外を投げる", () => {
+  it("applyData は達エネ保存データでないと例外を投げる", () => {
     const bad = { app: "other-app", inputs: {} } as unknown as SaveFile;
     expect(() => applyData(bad, {})).toThrow();
   });

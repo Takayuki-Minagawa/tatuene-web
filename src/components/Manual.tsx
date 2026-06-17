@@ -52,7 +52,7 @@ export default function Manual({ onClose }: { onClose: () => void }) {
           className="px-5 py-3 rounded-t-lg text-white font-bold flex items-center"
           style={{ background: "var(--head)" }}
         >
-          操作マニュアル — 逹エネ断熱シミュレーター Web版
+          操作マニュアル — 達エネ断熱シミュレーター Web版
           <button
             ref={closeBtnRef}
             className="ml-auto text-white text-xl leading-none"
@@ -67,7 +67,7 @@ export default function Manual({ onClose }: { onClose: () => void }) {
           <Section title="１．このツールについて">
             <p>
               木造住宅の局所的（ひと部屋）な断熱改修の効果を簡易に判定するツールです。
-              入力すると、Excel版「逹エネ断熱シミュレーター」と<strong>同一の計算式</strong>で
+              入力すると、Excel版「かつエネ断熱シミュレーター」と<strong>同一の計算式</strong>で
               自動計算され、診断帳票（評価シート）をPDFで出力できます。
             </p>
           </Section>

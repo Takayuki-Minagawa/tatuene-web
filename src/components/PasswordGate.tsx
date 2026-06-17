@@ -63,7 +63,7 @@ export default function PasswordGate({
         className="w-full max-w-sm rounded-xl bg-white p-8 shadow-md flex flex-col gap-4"
       >
         <h1 className="text-lg font-semibold text-slate-800">
-          逹エネ断熱シミュレーター
+          達エネ断熱シミュレーター
         </h1>
         <p className="text-sm text-slate-500">
           テスト公開中です。パスワードを入力してください。

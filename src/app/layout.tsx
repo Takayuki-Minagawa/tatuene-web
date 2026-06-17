@@ -4,9 +4,9 @@ import "./globals.css";
 import PasswordGate from "@/components/PasswordGate";
 
 export const metadata: Metadata = {
-  title: "逹エネ断熱シミュレーター Web版",
+  title: "達エネ断熱シミュレーター Web版",
   description:
-    "木造住宅ひと部屋断熱改修の効果を簡易に判定する、逹エネ断熱シミュレーターのWeb版（辰の達人診断）",
+    "木造住宅ひと部屋断熱改修の効果を簡易に判定する、かつエネ断熱シミュレーターのWeb版（辰の達人診断）",
 };
 
 export default function RootLayout({

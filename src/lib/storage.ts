@@ -69,13 +69,13 @@ export async function downloadBundle() {
     zip.file(path, dataUrl.slice(comma + 1), { base64: true });
   }
   const blob = await zip.generateAsync({ type: "blob" });
-  triggerDownload(blob, `逹エネ断熱_${safeTitle}.zip`);
+  triggerDownload(blob, `達エネ断熱_${safeTitle}.zip`);
 }
 
 /** 保存データを反映（ファイル読込・ドラフト復元の共通処理）。 */
 export function applyData(data: SaveFile, images: Record<string, string>): void {
   if ((data.app !== SAVE_APP_ID && data.app !== LEGACY_SAVE_APP_ID) || !data.inputs) {
-    throw new Error("このファイルは逹エネ断熱シミュレーターの保存データではありません。");
+    throw new Error("このファイルは達エネ断熱シミュレーターの保存データではありません。");
   }
   applyInputs(data.inputs);
   clearAll();

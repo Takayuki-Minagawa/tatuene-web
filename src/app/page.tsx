@@ -111,7 +111,7 @@ export default function Home() {
         className="flex items-center gap-3 px-4 py-2 text-white flex-wrap"
         style={{ background: "var(--head)" }}
       >
-        <span className="font-bold text-lg">逹エネ断熱シミュレーター</span>
+        <span className="font-bold text-lg">達エネ断熱シミュレーター</span>
         <span className="text-xs opacity-85">Web版</span>
         <div className="ml-auto flex gap-2 flex-wrap">
           <button

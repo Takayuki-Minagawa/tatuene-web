@@ -32,13 +32,17 @@ export default function SheetOverlays({
   interactiveDrawings: boolean;
 }) {
   const emuPx = (e: number) => (e / EMU) * scale;
+  // セル+EMUオフセットのアンカー（画像・図面枠共通の形）→ シート上のpx矩形
+  const anchorRect = (a: ImageAnchor | DrawingSlot) => ({
+    left: colLeft[a.fromCol] + emuPx(a.fromColOff),
+    top: rowTop[a.fromRow] + emuPx(a.fromRowOff),
+    right: colLeft[a.toCol] + emuPx(a.toColOff),
+    bottom: rowTop[a.toRow] + emuPx(a.toRowOff),
+  });
   return (
     <>
       {images.map((im, i) => {
-        const left = colLeft[im.fromCol] + emuPx(im.fromColOff);
-        const top = rowTop[im.fromRow] + emuPx(im.fromRowOff);
-        const right = colLeft[im.toCol] + emuPx(im.toColOff);
-        const bottom = rowTop[im.toRow] + emuPx(im.toRowOff);
+        const { left, top, right, bottom } = anchorRect(im);
         return (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -59,10 +63,7 @@ export default function SheetOverlays({
         );
       })}
       {slots.map((slot) => {
-        const left = colLeft[slot.fromCol] + emuPx(slot.fromColOff);
-        const top = rowTop[slot.fromRow] + emuPx(slot.fromRowOff);
-        const right = colLeft[slot.toCol] + emuPx(slot.toColOff);
-        const bottom = rowTop[slot.toRow] + emuPx(slot.toRowOff);
+        const { left, top, right, bottom } = anchorRect(slot);
         const height = Math.max(1, bottom - top);
 
         // 間取り図のコピー枠（現状図/改修図）: 計算シートの作図（基準 W×H）を、

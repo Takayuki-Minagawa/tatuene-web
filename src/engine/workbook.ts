@@ -105,6 +105,11 @@ export function isError(v: any): v is DetailedCellError {
   return v instanceof DetailedCellError;
 }
 
+/** 入力値が空欄か（null/undefined/空白のみ）。空欄カウント・必須チェック共通。 */
+export function isBlank(v: unknown): boolean {
+  return v === null || v === undefined || String(v).trim() === "";
+}
+
 /** 入力文字列をHF用の値へ（数値文字列→number、空→null、それ以外→文字列/数式）。 */
 export function coerce(value: string | number | null): any {
   if (value === null || value === undefined) return null;

@@ -2,7 +2,7 @@
  * 入力データチェック。PDF出力前に実行する。
  * エラー(出力ブロック) と 警告(確認の上で出力可) に分類。
  */
-import { WorkbookEngine, isError } from "./workbook";
+import { WorkbookEngine, isError, isBlank } from "./workbook";
 import { SHEETS } from "@/lib/sheets";
 
 export interface Issue {
@@ -14,12 +14,12 @@ export interface Issue {
 }
 
 const REQUIRED: { sheet: string; addr: string; label: string; numeric?: boolean }[] = [
-  { sheet: "表紙", addr: "E30", label: "工事名" },
-  { sheet: "表紙", addr: "E34", label: "住所" },
-  { sheet: "表紙", addr: "E42", label: "建築年" },
-  { sheet: "計算シート（現状）", addr: "D11", label: "床面積", numeric: true },
-  { sheet: "計算シート（現状）", addr: "D12", label: "外壁面長さ", numeric: true },
-  { sheet: "計算シート（現状）", addr: "N12", label: "天井高さ", numeric: true },
+  { sheet: SHEETS.cover, addr: "E30", label: "工事名" },
+  { sheet: SHEETS.cover, addr: "E34", label: "住所" },
+  { sheet: SHEETS.cover, addr: "E42", label: "建築年" },
+  { sheet: SHEETS.currentCalc, addr: "D11", label: "床面積", numeric: true },
+  { sheet: SHEETS.currentCalc, addr: "D12", label: "外壁面長さ", numeric: true },
+  { sheet: SHEETS.currentCalc, addr: "N12", label: "天井高さ", numeric: true },
 ];
 
 // 開口部のW(D列)/H(E列)のペア（片方のみ入力を検出）
@@ -29,13 +29,9 @@ const OPENING_ROWS: { rows: number[]; label: string }[] = [
   { rows: [34, 35, 36, 37, 38], label: "開口部3（室内ドア）" },
 ];
 
-function isBlank(v: any): boolean {
-  return v === null || v === undefined || String(v).trim() === "";
-}
-
 export function validate(eng: WorkbookEngine): Issue[] {
   const issues: Issue[] = [];
-  const cur = "計算シート（現状）";
+  const cur = SHEETS.currentCalc;
 
   // 1) 必須項目
   for (const f of REQUIRED) {

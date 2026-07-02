@@ -4,6 +4,7 @@
  */
 import React, { useEffect, useRef, useState } from "react";
 import { setInput, useInputValue } from "@/engine/store";
+import { a1ToRC } from "@/engine/workbook";
 import { MATERIAL_NAMES } from "@/lib/materials";
 import type { TextAlign } from "@/lib/grid";
 
@@ -15,12 +16,14 @@ const MATERIAL_OPTIONS = MATERIAL_NAMES.map((m) => (
 ));
 
 type NavDir = "next" | "prev" | "up" | "down";
-function parseAddr(a: string): { col: number; row: number } {
-  const m = /^([A-Z]+)(\d+)$/.exec(a);
-  if (!m) return { col: 0, row: 0 };
-  let col = 0;
-  for (const ch of m[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
-  return { col, row: Number(m[2]) };
+// data-input-addr は自前で付与した正しい番地のみだが、DOM経由なので万一の
+// 不正値でもキーボード移動が例外で壊れないようフォールバックする。
+function parseAddr(a: string | null): { row: number; col: number } {
+  try {
+    return a1ToRC(a ?? "");
+  } catch {
+    return { row: -1, col: -1 };
+  }
 }
 // 入力欄間をキーボードで移動する。up/down は同じ列の最も近い行へ、
 // next/prev は DOM 順（フォーム送り）。フォーカス移動で現在セルは onBlur 確定される。
@@ -31,11 +34,11 @@ function focusAdjacentInput(cur: HTMLElement, dir: NavDir) {
   if (idx < 0) return;
   if (dir === "next") return inputs[idx + 1]?.focus();
   if (dir === "prev") return inputs[idx - 1]?.focus();
-  const c = parseAddr(cur.getAttribute("data-input-addr") || "");
+  const c = parseAddr(cur.getAttribute("data-input-addr"));
   let best: HTMLElement | null = null;
   let bestRow = dir === "down" ? Infinity : -Infinity;
   for (const el of inputs) {
-    const a = parseAddr(el.getAttribute("data-input-addr") || "");
+    const a = parseAddr(el.getAttribute("data-input-addr"));
     if (a.col !== c.col) continue;
     if (dir === "down" && a.row > c.row && a.row < bestRow) { best = el; bestRow = a.row; }
     if (dir === "up" && a.row < c.row && a.row > bestRow) { best = el; bestRow = a.row; }

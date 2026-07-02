@@ -15,6 +15,8 @@ import {
   type SlotMeta,
 } from "@/drawings/store";
 import { APP_VERSION } from "@/lib/version";
+import { SHEETS } from "@/lib/sheets";
+import { sanitizeFileName } from "@/lib/filename";
 
 const SAVE_APP_ID = "tatuene-insulation";
 const LEGACY_SAVE_APP_ID = "katsuene-insulation";
@@ -32,9 +34,17 @@ export interface SaveFile {
   drawings?: Record<string, SlotMeta>;
 }
 
+// 表紙の「工事名」セル。保存ファイル名・PDFファイル名のタイトルに使う。
+const TITLE_CELL = "E30";
+
+/** 表紙の工事名（未入力なら空文字）。保存・PDFのタイトル共通。 */
+export function currentTitle(): string {
+  return (engine().getInputRaw(SHEETS.cover, TITLE_CELL) as string) || "";
+}
+
 export function buildSaveFile(): SaveFile {
   const inputs = engine().collectInputs();
-  const title = (engine().getInputRaw("表紙", "E30") as string) || "無題";
+  const title = currentTitle() || "無題";
   const drawings = collectMeta();
   return {
     app: SAVE_APP_ID,
@@ -58,7 +68,7 @@ function triggerDownload(blob: Blob, filename: string) {
 /** ZIPバンドルを保存（入力＋図面＋画像を1ファイルに）。 */
 export async function downloadBundle() {
   const data = buildSaveFile();
-  const safeTitle = (data.title || "診断").replace(/[\\/:*?"<>|]/g, "_");
+  const safeTitle = sanitizeFileName(data.title || "診断");
   const JSZip = (await import("jszip")).default;
   const zip = new JSZip();
   zip.file(SAVE_JSON, JSON.stringify(data, null, 1));

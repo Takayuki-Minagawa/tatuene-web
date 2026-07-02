@@ -59,6 +59,3 @@ export function resetDefaults() {
   engine().resetToDefaults();
   emit();
 }
-export function bump() {
-  emit();
-}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { engine, useEngineVersion } from "@/engine/store";
-import type { SheetModel } from "@/engine/workbook";
+import { isBlank, type SheetModel } from "@/engine/workbook";
 import { loadDraft, clearDraft } from "@/lib/autosave";
 import { applyData } from "@/lib/storage";
 
@@ -37,8 +37,6 @@ export function useEmptyJump(
   const version = useEngineVersion(); // 入力で空欄数が変わるので購読
   const emptyCount = useMemo(() => {
     const dropdowns = new Set(sheetModel.dropdownCells);
-    const isBlank = (v: unknown) =>
-      v === null || v === undefined || String(v).trim() === "";
     return sheetModel.inputs.filter(
       (i) => !dropdowns.has(i.addr) && isBlank(engine().getInputRaw(active, i.addr)),
     ).length;

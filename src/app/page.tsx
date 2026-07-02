@@ -9,12 +9,23 @@ import Manual from "@/components/Manual";
 import ReportFrame, { REPORT_FRAME_ID } from "@/components/ReportFrame";
 import { engine, resetDefaults } from "@/engine/store";
 import { clearAll as clearDrawings } from "@/drawings/store";
-import { downloadBundle, loadFile } from "@/lib/storage";
+import { downloadBundle, loadFile, currentTitle } from "@/lib/storage";
 import { useDraftAutosave, clearDraft, skipNextAutosave } from "@/lib/autosave";
 import { validate, type Issue } from "@/engine/validate";
 import { exportReportPdf } from "@/lib/pdf";
 import { SHEETS } from "@/lib/sheets";
 import { useZoom, useEmptyJump, useDraftRestore } from "./hooks";
+
+// ヘッダーの白抜き（ゴースト）ボタンの共通スタイル
+const GHOST_BTN_STYLE: React.CSSProperties = {
+  background: "transparent",
+  border: "1px solid #ffffff66",
+  color: "#fff",
+};
+
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
 
 export default function Home() {
   const model = engine().model;
@@ -64,11 +75,10 @@ export default function Home() {
       );
       const node = document.getElementById(REPORT_FRAME_ID);
       if (!node) throw new Error("帳票が見つかりません");
-      const title = (engine().getInputRaw(SHEETS.cover, "E30") as string) || "診断";
-      await exportReportPdf(node, title);
+      await exportReportPdf(node, currentTitle() || "診断");
       flash("PDF帳票を保存しました");
-    } catch (e: any) {
-      flash("PDF生成エラー: " + (e?.message ?? e));
+    } catch (e) {
+      flash("PDF生成エラー: " + errorMessage(e));
     } finally {
       setReportMounted(false);
     }
@@ -93,8 +103,8 @@ export default function Home() {
       await loadFile(f);
       clearDraft(); // 明示的な読込でドラフトは破棄（以後の編集で再作成される）
       flash(`読込完了: ${f.name}`);
-    } catch (err: any) {
-      flash(`読込エラー: ${err.message ?? err}`);
+    } catch (err) {
+      flash(`読込エラー: ${errorMessage(err)}`);
     } finally {
       e.target.value = "";
     }
@@ -116,28 +126,28 @@ export default function Home() {
         <div className="ml-auto flex gap-2 flex-wrap">
           <button
             className="toolbar-btn"
-            style={{ background: "transparent", border: "1px solid #ffffff66", color: "#fff" }}
+            style={GHOST_BTN_STYLE}
             onClick={() => setShowManual(true)}
           >
             ❓ 使い方
           </button>
           <button
             className="toolbar-btn"
-            style={{ background: "transparent", border: "1px solid #ffffff66", color: "#fff" }}
+            style={GHOST_BTN_STYLE}
             onClick={() => fileRef.current?.click()}
           >
             📂 読込
           </button>
           <button
             className="toolbar-btn"
-            style={{ background: "transparent", border: "1px solid #ffffff66", color: "#fff" }}
+            style={GHOST_BTN_STYLE}
             onClick={async () => {
               try {
                 await downloadBundle();
                 clearDraft();
                 flash("保存しました（.zip）");
-              } catch (err: any) {
-                flash("保存エラー: " + (err?.message ?? err));
+              } catch (err) {
+                flash("保存エラー: " + errorMessage(err));
               }
             }}
           >

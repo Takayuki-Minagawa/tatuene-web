@@ -9,12 +9,12 @@ import Manual from "@/components/Manual";
 import ReportFrame, { REPORT_FRAME_ID } from "@/components/ReportFrame";
 import { engine, resetDefaults } from "@/engine/store";
 import { clearAll as clearDrawings } from "@/drawings/store";
-import { downloadBundle, loadFile, currentTitle } from "@/lib/storage";
+import { downloadBundle, loadFiles, currentTitle } from "@/lib/storage";
 import { useDraftAutosave, clearDraft, skipNextAutosave } from "@/lib/autosave";
 import { validate, type Issue } from "@/engine/validate";
 import { exportReportPdf } from "@/lib/pdf";
 import { SHEETS } from "@/lib/sheets";
-import { useZoom, useEmptyJump, useDraftRestore } from "./hooks";
+import { useZoom, useEmptyJump, useDraftRestore, useSaveDataDrop } from "./hooks";
 
 // ヘッダーの白抜き（ゴースト）ボタンの共通スタイル
 const GHOST_BTN_STYLE: React.CSSProperties = {
@@ -95,20 +95,31 @@ export default function Home() {
     }
   }
 
-  async function onLoad(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  async function loadFromFiles(files: File[]) {
     try {
       skipNextAutosave();
-      await loadFile(f);
+      await loadFiles(files);
       clearDraft(); // 明示的な読込でドラフトは破棄（以後の編集で再作成される）
-      flash(`読込完了: ${f.name}`);
+      const main = files.find((f) => /\.(zip|json)$/i.test(f.name)) ?? files[0];
+      flash(
+        files.length === 1
+          ? `読込完了: ${main.name}`
+          : `読込完了: ${main.name} ほか${files.length - 1}件`,
+      );
     } catch (err) {
       flash(`読込エラー: ${errorMessage(err)}`);
-    } finally {
-      e.target.value = "";
     }
   }
+
+  async function onLoad(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    await loadFromFiles(files);
+    e.target.value = "";
+  }
+
+  // 保存データ（ZIP／JSON＋画像／フォルダ）のドラッグ&ドロップ読込
+  useSaveDataDrop(loadFromFiles);
 
   const modalOpen = showManual || issues !== null;
 
@@ -170,7 +181,8 @@ export default function Home() {
           <input
             ref={fileRef}
             type="file"
-            accept=".zip,.json,application/json,application/zip"
+            multiple
+            accept=".zip,.json,image/*,application/json,application/zip"
             className="hidden"
             onChange={onLoad}
           />

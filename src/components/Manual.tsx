@@ -120,11 +120,15 @@ export default function Manual({ onClose }: { onClose: () => void }) {
                 改修後シートの<strong>断熱改修面積は、改修する部位の面積のみ</strong>を記入します。
                 <strong style={{ color: "#b3261e" }}>面積を入れないと、建材を選んでも計算に反映されません。</strong>
               </li>
+              <li>断熱改修面積を入力した各部位の概要を記入し、建材を選択します。</li>
               <li>気密性能の「換気回数」は、建物の年代を参考に選択してください。</li>
               <li>一つの部位に複数仕様がある場合は、大部分を占める仕様を記入します。</li>
               <li>
                 隙間改善工事は、床・壁・天井・建具のうち2つ改善で1UP、3つで2UP、4つで3UP
                 （C値5を上限）として扱います。
+              </li>
+              <li>
+                評価シートの「2. 環境への影響評価」で、冷暖房機等の使用時間と期間を入力します。
               </li>
             </ul>
           </Section>
@@ -151,6 +155,11 @@ export default function Manual({ onClose }: { onClose: () => void }) {
               <strong>💾 保存</strong>で入力内容と図面を1つの<strong>ZIPファイル</strong>に保存、
               <strong>📂 読込</strong>で復元できます（画像はZIP内に個別ファイルとして同梱されます）。
               図面のない旧形式のJSONファイルも読み込めます。
+            </p>
+            <p className="mt-1">
+              ZIPを展開したフォルダ（JSON＋画像）を読み込むときは、<strong>フォルダごと画面に
+              ドラッグ&ドロップ</strong>するか、読込ダイアログで<strong>JSONと画像ファイルを
+              まとめて選択</strong>してください（JSON単体では画像は復元されません）。
             </p>
             <p className="mt-2 rounded-md p-2" style={{ background: "#fff7ed", border: "1px solid #f0c081" }}>
               ⚠ 入力は自動でこのブラウザ内（端末内）に一時保存され、次回そのまま続けられます。

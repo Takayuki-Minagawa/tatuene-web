@@ -37,7 +37,7 @@ function FormField({ sheet, item }: { sheet: string; item: FormItem }) {
         {item.kind === "formula" ? (
           <ReadOnlyValue sheet={sheet} addr={item.addr} />
         ) : (
-          <span id={id} className="form-input-wrap">
+          <span id={id} className={"form-input-wrap" + (item.short ? " is-short" : "")}>
             <CellInput
               sheet={sheet}
               addr={item.addr}

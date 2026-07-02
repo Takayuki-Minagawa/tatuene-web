@@ -92,37 +92,86 @@ export function applyData(data: SaveFile, images: Record<string, string>): void 
   if (data.drawings) restore(data.drawings, images);
 }
 
-/** .zip / .json を読み込んで反映。 */
-export async function loadFile(file: File): Promise<void> {
-  const isZip = /\.zip$/i.test(file.name) || file.type === "application/zip" || file.type === "application/x-zip-compressed";
-  if (isZip) {
-    const JSZip = (await import("jszip")).default;
-    const zip = await JSZip.loadAsync(file);
-    const jsonEntry = zip.file(SAVE_JSON) ?? zip.file(LEGACY_SAVE_JSON);
-    if (!jsonEntry) throw new Error(`バンドル内に ${SAVE_JSON} が見つかりません。`);
-    const data = parseSaveJson(await jsonEntry.async("string"));
-    const images: Record<string, string> = {};
-    // 信頼できないファイルの暴走（zip bomb 等）に備え、画像枚数と総量に上限を設ける
-    const MAX_IMAGES = 24;
-    const MAX_TOTAL_B64 = 64 * 1024 * 1024; // base64 文字列の合計（≒48MBの画像）
-    let count = 0;
-    let totalB64 = 0;
-    for (const m of Object.values(data.drawings ?? {})) {
-      if (!m.imageFile) continue;
-      if (++count > MAX_IMAGES) throw new Error("画像の数が多すぎます。ファイルを確認してください。");
-      const f = zip.file(m.imageFile);
-      if (!f) continue;
-      const b64 = await f.async("base64");
-      totalB64 += b64.length;
-      if (totalB64 > MAX_TOTAL_B64) throw new Error("画像データが大きすぎます。ファイルを確認してください。");
-      // MIME は許可リストで検証（不正な type の流用を防ぐ）
-      images[m.imageFile] = `data:${safeImageMime(m.imageType)};base64,${b64}`;
-    }
-    return applyData(data, images);
-  } else {
-    const data = parseSaveJson(await file.text());
-    return applyData(data, {});
+// 信頼できないファイルの暴走（zip bomb 等）に備え、画像枚数と総量に上限を設ける
+const MAX_IMAGES = 24;
+const MAX_TOTAL_B64 = 64 * 1024 * 1024; // base64 文字列の合計（≒48MBの画像）
+
+const isZipFile = (f: File) =>
+  /\.zip$/i.test(f.name) || f.type === "application/zip" || f.type === "application/x-zip-compressed";
+
+/** ZIPバンドル（保存ファイル）を読み込んで反映。 */
+async function loadZip(file: File): Promise<void> {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(file);
+  const jsonEntry = zip.file(SAVE_JSON) ?? zip.file(LEGACY_SAVE_JSON);
+  if (!jsonEntry) throw new Error(`バンドル内に ${SAVE_JSON} が見つかりません。`);
+  const data = parseSaveJson(await jsonEntry.async("string"));
+  const images: Record<string, string> = {};
+  let count = 0;
+  let totalB64 = 0;
+  for (const m of Object.values(data.drawings ?? {})) {
+    if (!m.imageFile) continue;
+    if (++count > MAX_IMAGES) throw new Error("画像の数が多すぎます。ファイルを確認してください。");
+    const f = zip.file(m.imageFile);
+    if (!f) continue;
+    const b64 = await f.async("base64");
+    totalB64 += b64.length;
+    if (totalB64 > MAX_TOTAL_B64) throw new Error("画像データが大きすぎます。ファイルを確認してください。");
+    // MIME は許可リストで検証（不正な type の流用を防ぐ）
+    images[m.imageFile] = `data:${safeImageMime(m.imageType)};base64,${b64}`;
   }
+  return applyData(data, images);
+}
+
+/** File を dataURL に読み込む（MIMEは許可リスト検証済みのものへ差し替え）。 */
+function fileToDataUrl(file: File, mime: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const s = String(reader.result);
+      const comma = s.indexOf(",");
+      resolve(`data:${mime};base64,${s.slice(comma + 1)}`);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("画像の読み込みに失敗しました。"));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * 選択・ドロップされたファイル群を読み込んで反映。
+ *  - .zip 単体: 従来のバンドル読込
+ *  - .json（＋画像ファイル）: ZIPを展開したフォルダの中身をまとめて選択／
+ *    フォルダごとドラッグ&ドロップした場合。画像はメタの imageFile 名で突合する。
+ */
+export async function loadFiles(files: File[]): Promise<void> {
+  const json = files.find((f) => /\.json$/i.test(f.name));
+  const zip = files.find(isZipFile);
+  if (!json) {
+    if (zip) return loadZip(zip);
+    throw new Error(`保存データ（.zip または ${SAVE_JSON}）が見つかりません。`);
+  }
+  const data = parseSaveJson(await json.text());
+  // 画像は「assets/<slot>.<ext>」のファイル名部分で突合（フォルダ名の違いを許容）
+  const byBase = new Map(files.map((f) => [f.name, f]));
+  const images: Record<string, string> = {};
+  let count = 0;
+  let totalB64 = 0;
+  for (const m of Object.values(data.drawings ?? {})) {
+    if (!m.imageFile) continue;
+    if (++count > MAX_IMAGES) throw new Error("画像の数が多すぎます。ファイルを確認してください。");
+    const f = byBase.get(m.imageFile.split("/").pop()!);
+    if (!f) continue;
+    const dataUrl = await fileToDataUrl(f, safeImageMime(m.imageType));
+    totalB64 += dataUrl.length;
+    if (totalB64 > MAX_TOTAL_B64) throw new Error("画像データが大きすぎます。ファイルを確認してください。");
+    images[m.imageFile] = dataUrl;
+  }
+  return applyData(data, images);
+}
+
+/** .zip / .json 単体を読み込んで反映。 */
+export async function loadFile(file: File): Promise<void> {
+  return loadFiles([file]);
 }
 
 /** 保存JSONをパース。壊れている場合はユーザー向けの日本語メッセージにする。 */

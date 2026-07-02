@@ -58,6 +58,69 @@ export function useEmptyJump(
   return { emptyCount, jumpNextEmpty };
 }
 
+/** ドロップされたエントリ群からファイルを収集（フォルダは3階層まで展開）。 */
+async function walkEntries(entries: FileSystemEntry[], fallback: File[]): Promise<File[]> {
+  if (entries.length === 0) return fallback;
+  const out: File[] = [];
+  async function walk(entry: FileSystemEntry, depth: number): Promise<void> {
+    if (entry.isFile) {
+      const f = await new Promise<File>((res, rej) =>
+        (entry as FileSystemFileEntry).file(res, rej),
+      );
+      out.push(f);
+    } else if (entry.isDirectory && depth < 3) {
+      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      // readEntries は分割返却されるため、空になるまで繰り返す
+      let batch: FileSystemEntry[];
+      do {
+        batch = await new Promise<FileSystemEntry[]>((res, rej) =>
+          reader.readEntries(res, rej),
+        );
+        for (const child of batch) await walk(child, depth + 1);
+      } while (batch.length > 0);
+    }
+  }
+  for (const en of entries) await walk(en, 0);
+  return out;
+}
+
+/**
+ * 保存データ（.zip／.json＋画像、またはそれらを含むフォルダ）の
+ * 画面全体へのドラッグ&ドロップ読込。図面エディタへの画像ドロップは
+ * 各エディタ側が処理するため、保存データを含むドロップのみ扱う。
+ */
+export function useSaveDataDrop(onFiles: (files: File[]) => void) {
+  const handler = useRef(onFiles);
+  useEffect(() => {
+    handler.current = onFiles;
+  });
+  useEffect(() => {
+    function onDragOver(e: DragEvent) {
+      if (e.dataTransfer?.types.includes("Files")) e.preventDefault();
+    }
+    function onDrop(e: DragEvent) {
+      const dt = e.dataTransfer;
+      if (!dt || !Array.from(dt.types).includes("Files")) return;
+      // 既定動作（ファイルをブラウザで開いて画面が失われる）は常に抑止する。
+      // エントリの取得はイベント中に同期で行う必要がある。
+      e.preventDefault();
+      const entries = Array.from(dt.items ?? [])
+        .map((it) => it.webkitGetAsEntry?.())
+        .filter((x): x is FileSystemEntry => !!x);
+      const fallback = Array.from(dt.files ?? []);
+      void walkEntries(entries, fallback).then((files) => {
+        if (files.some((f) => /\.(zip|json)$/i.test(f.name))) handler.current(files);
+      });
+    }
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("drop", onDrop);
+    return () => {
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, []);
+}
+
 /** 起動時に前回のドラフトがあれば復元確認する（1回限り）。 */
 export function useDraftRestore(opts: {
   flash: (m: string) => void;

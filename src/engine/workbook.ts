@@ -141,6 +141,21 @@ export class WorkbookEngine {
     for (const name of model.sheetOrder) {
       this.sheetIds.set(name, this.hf.getSheetId(this.alias.get(name)!)!);
     }
+    // 抽出時の default は原則セル値と同一。意図的に上書きされた default
+    // （例: 改修後シート「断熱工事の概要」= 空欄）だけを起動時に反映する。
+    // 全セルへの一括 reset は行わない（coerce の trim 等で原本の値が変わり
+    // 得るため、差分のあるセルに限定する）。
+    this.hf.batch(() => {
+      for (const name of model.sheetOrder) {
+        const sm = model.sheets[name];
+        for (const inp of sm.inputs) {
+          const cur = sm.data[inp.row]?.[inp.col] ?? null;
+          if ((inp.default ?? null) !== cur) {
+            this.setInput(name, inp.addr, (inp.default ?? null) as string | number | null);
+          }
+        }
+      }
+    });
   }
 
   sheetId(name: string): number {

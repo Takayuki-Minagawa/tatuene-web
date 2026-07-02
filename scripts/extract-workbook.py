@@ -97,6 +97,21 @@ def cell_content(c):
 EXCLUDE_IMAGES = {"image3.png"}
 EMU_PER_PX = 9525  # 914400 EMU/inch ÷ 96 px/inch
 
+# 入力欄から除外するセル（原本Excelで保護解除のまま残っている足場セル。
+# 注記領域の空セルや表の最下部の空行で、入力欄として表示すべきでないもの）
+_BOTTOM_ROWS = {f"{c}{r}" for r in (40, 41) for c in "BCDEFGHIJKLMNOPQ"}
+EXCLUDE_INPUT_CELLS = {
+    "計算シート（現状）": {"H26", "I26", "H31", "H32", "H33", "H35", "I35", "H36"} | _BOTTOM_ROWS,
+    "計算シート（改修後）": {f"{c}{r}" for r in range(30, 39) for c in "NOPQ"} | _BOTTOM_ROWS,
+}
+
+# default を空欄に上書きするセル（原本Excelの初期状態は空欄のため。
+# セル値(data)はExcelキャッシュとの忠実性検証用にそのまま残し、
+# アプリ側(WorkbookEngine)が起動時に default との差分だけを反映する）
+DEFAULT_BLANK_CELLS = {
+    "計算シート（改修後）": {f"{c}{r}" for r in range(30, 39) for c in "LM"},  # 断熱工事の概要
+}
+
 
 def images_by_sheet():
     """各シートの drawing から PNG/JPEG 画像の配置（アンカー）を抽出。
@@ -359,11 +374,17 @@ def main():
                     content = data[r][col]
                     if isinstance(content, str) and content.startswith("="):
                         continue  # 数式は入力ではない
+                    addr = f"{get_column_letter(c.column)}{c.row}"
+                    if addr in EXCLUDE_INPUT_CELLS.get(name, set()):
+                        continue  # 足場セルは入力欄にしない
+                    default = content
+                    if addr in DEFAULT_BLANK_CELLS.get(name, set()):
+                        default = None  # 初期状態は空欄
                     inputs.append({
-                        "addr": f"{get_column_letter(c.column)}{c.row}",
+                        "addr": addr,
                         "row": r,
                         "col": col,
-                        "default": content,
+                        "default": default,
                     })
 
         # 列幅(おおよそ): UI再現の参考

@@ -322,6 +322,11 @@ table.xl-grid {
   min-width: 0;
   display: block;
 }
+/* 短い入力欄（階数など1〜2文字の入力用） */
+.form-input-wrap.is-short {
+  flex: none;
+  width: 6em;
+}
 /* フォーム内の入力欄は大きく・はっきり見せる */
 .input-form .form-input-wrap .cell-edit {
   height: 40px;

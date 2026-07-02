@@ -2,18 +2,44 @@
 /**
  * 編集可能セル（入力 / 建材ドロップダウン）。SheetGrid から抽出。
  */
-import React, { useEffect, useRef, useState } from "react";
-import { setInput, useInputValue } from "@/engine/store";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { setInput, useInputValue, useEngineVersion } from "@/engine/store";
 import { a1ToRC } from "@/engine/workbook";
-import { MATERIAL_NAMES } from "@/lib/materials";
+import { materialNamesAt } from "@/lib/materials";
 import type { TextAlign } from "@/lib/grid";
 
-// 建材リストは不変。option 要素を一度だけ生成して使い回す（毎回の再生成を回避）。
-const MATERIAL_OPTIONS = MATERIAL_NAMES.map((m) => (
-  <option key={m} value={m}>
-    {m}
-  </option>
-));
+/**
+ * 建材ドロップダウン。部材性能シートの現在値からリストを生成するため、
+ * ユーザーが追加・変更した建材も選択肢に反映される。
+ * （CellInput 本体から分離し、version 購読をドロップダウンだけに限定する）
+ */
+function MaterialSelect({ sheet, addr, label }: { sheet: string; addr: string; label?: string }) {
+  const raw = useInputValue(sheet, addr);
+  const engineStr = raw === null || raw === undefined ? "" : String(raw);
+  const names = materialNamesAt(useEngineVersion());
+  const options = useMemo(
+    () =>
+      names.map((m) => (
+        <option key={m} value={m}>
+          {m}
+        </option>
+      )),
+    [names],
+  );
+  return (
+    <select
+      className="cell-edit cell-select"
+      value={engineStr || "無し"}
+      aria-label={label || addr}
+      onChange={(e) => setInput(sheet, addr, e.target.value)}
+    >
+      {!names.includes(engineStr) && engineStr !== "" && (
+        <option value={engineStr}>{engineStr}</option>
+      )}
+      {options}
+    </select>
+  );
+}
 
 type NavDir = "next" | "prev" | "up" | "down";
 // data-input-addr は自前で付与した正しい番地のみだが、DOM経由なので万一の
@@ -73,19 +99,7 @@ function CellInput({
   }, [engineStr]);
 
   if (isDropdown) {
-    return (
-      <select
-        className="cell-edit cell-select"
-        value={engineStr || "無し"}
-        aria-label={label || addr}
-        onChange={(e) => setInput(sheet, addr, e.target.value)}
-      >
-        {!MATERIAL_NAMES.includes(engineStr) && engineStr !== "" && (
-          <option value={engineStr}>{engineStr}</option>
-        )}
-        {MATERIAL_OPTIONS}
-      </select>
-    );
+    return <MaterialSelect sheet={sheet} addr={addr} label={label} />;
   }
   return (
     <input

@@ -27,6 +27,8 @@ export interface FormItem {
   unit?: string;
   /** 数値入力（モバイルの decimal キーパッド用）。 */
   numeric?: boolean;
+  /** 入力欄を短く表示する（階数など1〜2文字の入力用）。 */
+  short?: boolean;
   /** 項目ごとの解説（任意・後から追記可）。 */
   guidance?: string;
 }
@@ -123,6 +125,7 @@ export function parseSheet(
       label: override?.label ?? detectLabel(row, col),
       unit: override?.unit ?? detectUnit(row, col),
       numeric: override?.numeric ?? (kind === "input" && isNumericCell(row, col)),
+      short: override?.short,
       guidance: override?.guidance,
     };
   }

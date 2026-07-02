@@ -13,6 +13,8 @@ export interface ItemOverride {
   label?: string;
   unit?: string;
   numeric?: boolean;
+  /** 入力欄を短く表示する（階数など1〜2文字の入力用）。 */
+  short?: boolean;
   /** 項目ごとの解説（任意・後から追記可）。 */
   guidance?: string;
 }
@@ -69,8 +71,14 @@ export const SHEET_LAYOUTS: Record<string, SheetLayout> = {
           { addr: "E30", label: "工事名" },
           { addr: "I30", label: "工事種別" },
           { addr: "E34", label: "住所" },
-          { addr: "E38", label: "場所", unit: "" },
-          { addr: "H38", label: "階・室", unit: "" },
+          {
+            addr: "E38",
+            label: "場所",
+            unit: "階",
+            short: true,
+            guidance: "1階の場合は「1」を、2階の場合は「2」を、それぞれ入力してください。",
+          },
+          { addr: "H38", label: "室", unit: "" },
           { addr: "E42", label: "建築年", guidance: "「令和7」「平成20」など元号＋年で入力すると、右に西暦が自動表示されます。" },
           { addr: "H42", label: "建築年（西暦）" },
           { addr: "E46", label: "作成日" },
@@ -82,8 +90,9 @@ export const SHEET_LAYOUTS: Record<string, SheetLayout> = {
         defaultOpen: true,
         addrs: ["E49", "I49"],
         overrides: [
-          { addr: "E49", label: "所属" },
-          { addr: "I49", label: "氏名" },
+          // unit:"" は右隣の見出し文字（「氏名」等）を単位として誤検出するのを抑止
+          { addr: "E49", label: "所属", unit: "" },
+          { addr: "I49", label: "氏名", unit: "" },
         ],
         // 診断者所属の下の未使用セル（50〜53行）はフォームに出さない。
         excludeAddrs: [
@@ -229,9 +238,9 @@ function calcSections(variant: "現状" | "改修後"): SectionConfig[] {
     planSec("plan", "間取り図・改修部分図（改修図）", 41, 64, C, "slot2",
       "間取り・改修部分の図を取り込み、矢印・丸数字・文字で注釈できます。ここで作図した図はそのまま評価シートの「改修図」に反映されます。"),
     // 壁部：外壁部は「既存建材」と「断熱建材」の2ブロック、内壁・室内ドアも分解。
-    matFieldsSec("walls-outer1", "壁部 ① 外壁部（既存建材）", 69, 74, {
+    matFieldsSec("walls-outer1", "壁部 ① 外壁部（断熱建材）", 69, 74, {
       open: true,
-      guidance: "外壁部の既存建材を上から順に選びます（最大6種）。",
+      guidance: "外壁部の断熱建材を上から順に選びます（最大6種）。",
       area: { addr: "D67", label: "外壁部面積", unit: "㎡" },
     }),
     matFieldsSec("walls-outer2", "壁部 ② 外壁部（断熱建材）", 86, 91, {

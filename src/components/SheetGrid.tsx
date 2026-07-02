@@ -7,10 +7,10 @@
  * 結合セル・配置・太字・表示形式は Excel から抽出した情報を反映。
  */
 import React, { useMemo } from "react";
-import { useDisplay } from "@/engine/store";
 import type { SheetModel } from "@/engine/workbook";
-import { colName, addrOf, widthPx, computeMerges, asTextAlign } from "@/lib/grid";
+import { colName, addrOf, widthPx, computeMerges, asTextAlign, isFormulaValue, isNumericFmt } from "@/lib/grid";
 import CellInput from "./CellInput";
+import FormulaCell from "./FormulaCell";
 import SheetOverlays from "./SheetOverlays";
 import { coverVersionLabel } from "@/lib/version";
 import { SHEETS } from "@/lib/sheets";
@@ -22,17 +22,6 @@ const BORDER = "1px solid #9aa0a6";
 const STICKY_HEADER_ROWS: Record<string, number[]> = {
   [SHEETS.materials]: [9, 10], // 「建材／熱抵抗値…」と単位の2行
 };
-
-/** 数式セルの表示値。そのセルの表示文字列だけを購読し、変化時のみ再描画する。 */
-const FormulaCell = React.memo(function FormulaCell({
-  sheet,
-  addr,
-}: {
-  sheet: string;
-  addr: string;
-}) {
-  return <>{useDisplay(sheet, addr)}</>;
-});
 
 function SheetGrid({
   sheetName,
@@ -138,7 +127,7 @@ function SheetGrid({
                 const sid = model.styles[r]?.[c] ?? -1;
                 const st = sid >= 0 ? model.styleTable[sid] : null;
                 const raw = model.data[r]?.[c];
-                const isFormula = typeof raw === "string" && raw.startsWith("=");
+                const isFormula = isFormulaValue(raw);
                 const isInput = inputSet.has(addr) && !isFormula;
                 const isDropdown = dropdownSet.has(addr);
                 const align = asTextAlign(st?.h, typeof raw === "number" ? "right" : "left");
@@ -168,10 +157,7 @@ function SheetGrid({
                   content = <FormulaCell sheet={sheetName} addr={addr} />;
                 } else if (isInput) {
                   // 数値セル判定（decimalキーパッド用）と、SR向けラベル（同じ行で左隣の見出し文字）
-                  const fmt = st?.fmt;
-                  const numeric =
-                    typeof raw === "number" ||
-                    (!!fmt && fmt !== "@" && fmt !== "General" && /[0#]/.test(fmt));
+                  const numeric = typeof raw === "number" || isNumericFmt(st?.fmt);
                   let label = addr;
                   for (let cc = c - 1; cc >= 0; cc--) {
                     const t = model.data[r]?.[cc];
@@ -212,7 +198,7 @@ function SheetGrid({
                       fontWeight: st?.b ? 700 : undefined,
                       fontSize: `${fontPx}px`,
                       whiteSpace: st?.wrap ? "normal" : "nowrap",
-                      verticalAlign: st?.v === "center" ? "middle" : "middle",
+                      verticalAlign: "middle",
                       background: bg,
                       color: !faithful && isFormula ? "#14418a" : st?.color || undefined,
                       padding: isInput && !faithful ? 0 : "1px 3px",

@@ -6,13 +6,10 @@
  */
 import React from "react";
 import CellInput from "./CellInput";
-import { useDisplay, engine } from "@/engine/store";
-import { computeMerges, addrOf, colName, widthPx } from "@/lib/grid";
+import FormulaCell from "./FormulaCell";
+import { engine } from "@/engine/store";
+import { computeMerges, addrOf, colName, widthPx, isFormulaValue } from "@/lib/grid";
 import type { RefTableRegion } from "@/lib/sheet-parser";
-
-function FormulaCell({ sheet, addr }: { sheet: string; addr: string }) {
-  return <>{useDisplay(sheet, addr)}</>;
-}
 
 export default function RefTable({ sheet, region }: { sheet: string; region: RefTableRegion }) {
   const model = engine().model.sheets[sheet];
@@ -61,7 +58,7 @@ export default function RefTable({ sheet, region }: { sheet: string; region: Ref
                 const rs = span ? Math.min(span.rs, region.toRow - r + 1) : 1;
                 const addr = addrOf(r, c);
                 const raw = model.data[r]?.[c];
-                const isFormula = typeof raw === "string" && raw.startsWith("=");
+                const isFormula = isFormulaValue(raw);
                 const isInput = inputSet.has(addr) && !isFormula;
                 let content: React.ReactNode = null;
                 if (isInput) {

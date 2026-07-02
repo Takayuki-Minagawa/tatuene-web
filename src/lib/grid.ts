@@ -45,6 +45,15 @@ export function computeMerges(merges: string[]): MergeInfo {
   return { anchors, covered };
 }
 
+/** セル生値が数式（"=..."）か。 */
+export const isFormulaValue = (v: unknown): v is string =>
+  typeof v === "string" && v.startsWith("=");
+
+/** 表示形式(numFmt)が数値系か（decimal キーパッド判定用）。 */
+export function isNumericFmt(fmt: string | undefined): boolean {
+  return !!fmt && fmt !== "@" && fmt !== "General" && /[0#]/.test(fmt);
+}
+
 export type TextAlign = "left" | "center" | "right" | "justify";
 
 /** Excel由来の配置文字列を CSS textAlign に安全に変換する */

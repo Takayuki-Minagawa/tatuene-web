@@ -13,9 +13,3 @@ export const PLAN_AUTHOR_H = 700;
 
 /** 評価シートで「間取り図のコピー」として読み取り専用表示する図面スロットID。 */
 export const PLAN_COPY_SLOT_IDS = new Set<string>(["slot1", "slot2"]);
-
-/** 計算シート名 → 間取り図を載せる評価シートの図面スロットID。 */
-export const PLAN_SLOT_BY_SHEET: Record<string, string> = {
-  "計算シート（現状）": "slot1", // 現状図
-  "計算シート（改修後）": "slot2", // 改修図
-};

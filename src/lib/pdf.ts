@@ -1,6 +1,7 @@
 "use client";
 /** 評価シート(帳票)を横向きA4のPDFとして書き出す。
  *  jsPDF / html2canvas-pro はサイズが大きいため、出力時にのみ動的読込する。 */
+import { sanitizeFileName } from "@/lib/filename";
 
 export async function exportReportPdf(node: HTMLElement, title: string): Promise<void> {
   const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
@@ -46,6 +47,6 @@ export async function exportReportPdf(node: HTMLElement, title: string): Promise
   const y = (ph - h) / 2;
   pdf.addImage(img, "JPEG", x, y, w, h);
 
-  const safe = (title || "診断").replace(/[\\/:*?"<>|]/g, "_");
+  const safe = sanitizeFileName(title || "診断");
   pdf.save(`逹エネ断熱_評価シート_${safe}.pdf`);
 }

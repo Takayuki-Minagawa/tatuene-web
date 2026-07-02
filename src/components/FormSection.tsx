@@ -8,6 +8,7 @@ import FormField from "./FormField";
 import RefTable from "./RefTable";
 import PlanDrawing from "./PlanDrawing";
 import { engine, useEngineVersion } from "@/engine/store";
+import { isBlank } from "@/engine/workbook";
 import type { FormSection as Section } from "@/lib/sheet-parser";
 
 function FormSection({ sheet, section }: { sheet: string; section: Section }) {
@@ -19,11 +20,11 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
   // 入力項目のうち空欄の数（バッジ表示用）。
   const emptyCount = useMemo(() => {
     if (section.kind !== "fields") return 0;
-    return section.items.filter((it) => {
-      if (it.kind !== "input" && it.kind !== "dropdown") return false;
-      const v = engine().getInputRaw(sheet, it.addr);
-      return v === null || v === undefined || String(v).trim() === "";
-    }).length;
+    return section.items.filter(
+      (it) =>
+        (it.kind === "input" || it.kind === "dropdown") &&
+        isBlank(engine().getInputRaw(sheet, it.addr)),
+    ).length;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version, sheet, section]);
 

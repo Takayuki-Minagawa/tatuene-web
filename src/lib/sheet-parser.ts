@@ -11,8 +11,8 @@
  *
  * React にもエンジンにも依存しない（単体テスト容易）。
  */
-import { computeMerges, colName } from "@/lib/grid";
-import type { SheetModel } from "@/engine/workbook";
+import { computeMerges, colName, isFormulaValue, isNumericFmt } from "@/lib/grid";
+import { a1ToRC, type SheetModel } from "@/engine/workbook";
 import type { SheetLayout, SectionConfig } from "@/lib/sheet-layout";
 
 export type ItemKind = "input" | "dropdown" | "formula";
@@ -56,7 +56,6 @@ export interface FormSheet {
   sections: FormSection[];
 }
 
-const isFormula = (v: unknown): v is string => typeof v === "string" && v.startsWith("=");
 const isText = (v: unknown): v is string =>
   typeof v === "string" && v.trim() !== "" && !v.startsWith("=");
 
@@ -102,7 +101,7 @@ export function parseSheet(
       const v = data[row]?.[c];
       if (v === null || v === undefined || v === "") continue;
       if (typeof v === "number") return undefined;
-      if (isFormula(v)) return undefined;
+      if (isFormulaValue(v)) return undefined;
       const t = String(v).trim();
       return looksLikeUnit(t) ? t : undefined;
     }
@@ -113,8 +112,7 @@ export function parseSheet(
     const raw = data[row]?.[col];
     if (typeof raw === "number") return true;
     const sid = model.styles[row]?.[col] ?? -1;
-    const fmt = sid >= 0 ? model.styleTable[sid]?.fmt : undefined;
-    return !!fmt && fmt !== "@" && fmt !== "General" && /[0#]/.test(fmt);
+    return isNumericFmt(sid >= 0 ? model.styleTable[sid]?.fmt : undefined);
   }
 
   function buildItem(addr: string, row: number, col: number, override?: ReturnType<typeof getOverride>): FormItem {
@@ -133,11 +131,18 @@ export function parseSheet(
     return sec.overrides?.find((o) => o.addr === addr);
   }
 
-  function rc(addr: string): { row: number; col: number } {
-    const m = /^([A-Z]+)(\d+)$/.exec(addr)!;
-    let col = 0;
-    for (const ch of m[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
-    return { row: Number(m[2]) - 1, col: col - 1 };
+  /** 領域内の入力を「割当済み」にする（フォーム項目・その他へ出さない）。 */
+  function assignRegionInputs(region: RefTableRegion): void {
+    for (const i of renderableInputs) {
+      if (
+        i.row >= region.fromRow &&
+        i.row <= region.toRow &&
+        i.col >= region.fromCol &&
+        i.col <= region.toCol
+      ) {
+        assigned.add(i.addr);
+      }
+    }
   }
 
   const sections: FormSection[] = [];
@@ -146,18 +151,7 @@ export function parseSheet(
     // 図面セクション: 表ではなく図面エディタを表示。reftable 領域内の入力（元の
     // セル作図グリッド）は割当済み扱いにし、フォーム項目・その他へ出さない。
     if (sec.drawingSlotId) {
-      if (sec.reftable) {
-        for (const i of renderableInputs) {
-          if (
-            i.row >= sec.reftable.fromRow &&
-            i.row <= sec.reftable.toRow &&
-            i.col >= sec.reftable.fromCol &&
-            i.col <= sec.reftable.toCol
-          ) {
-            assigned.add(i.addr);
-          }
-        }
-      }
+      if (sec.reftable) assignRegionInputs(sec.reftable);
       sections.push({
         id: sec.id,
         title: sec.title,
@@ -175,7 +169,7 @@ export function parseSheet(
       // 入力（建材選択）は表で、部位ごとの熱損失などの結果はフィールドで前面に出す。
       const resultItems: FormItem[] = [];
       for (const addr of sec.formulas ?? []) {
-        const { row, col } = rc(addr);
+        const { row, col } = a1ToRC(addr);
         const ov = getOverride(sec, addr);
         resultItems.push({
           addr,
@@ -195,16 +189,7 @@ export function parseSheet(
         reftable: sec.reftable,
       });
       // reftable 範囲内の入力は「割当済み」とみなす（その他へ回収しない）。
-      for (const i of renderableInputs) {
-        if (
-          i.row >= sec.reftable.fromRow &&
-          i.row <= sec.reftable.toRow &&
-          i.col >= sec.reftable.fromCol &&
-          i.col <= sec.reftable.toCol
-        ) {
-          assigned.add(i.addr);
-        }
-      }
+      assignRegionInputs(sec.reftable);
       continue;
     }
 
@@ -213,7 +198,7 @@ export function parseSheet(
     // 1) 明示リスト（順序維持）
     if (sec.addrs) {
       for (const addr of sec.addrs) {
-        const { row, col } = rc(addr);
+        const { row, col } = a1ToRC(addr);
         if (covered.has(`${row},${col}`)) continue;
         if (inputByAddr.has(addr)) {
           items.push(buildItem(addr, row, col, getOverride(sec, addr)));
@@ -237,7 +222,7 @@ export function parseSheet(
 
     // 3) 数式の読み取り専用表示（任意）
     for (const addr of sec.formulas ?? []) {
-      const { row, col } = rc(addr);
+      const { row, col } = a1ToRC(addr);
       const ov = getOverride(sec, addr);
       items.push({
         addr,
@@ -283,10 +268,8 @@ export function parseSheet(
 function resolveGuidance(sec: SectionConfig, data: any[][]): string | undefined {
   if (sec.guidance) return sec.guidance;
   if (sec.guidanceCell) {
-    const m = /^([A-Z]+)(\d+)$/.exec(sec.guidanceCell)!;
-    let col = 0;
-    for (const ch of m[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
-    const v = data[Number(m[2]) - 1]?.[col - 1];
+    const { row, col } = a1ToRC(sec.guidanceCell);
+    const v = data[row]?.[col];
     if (typeof v === "string" && v.trim()) return v.trim();
   }
   if (sec.guidanceRows) {

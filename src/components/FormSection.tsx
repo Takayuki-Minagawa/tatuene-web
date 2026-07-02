@@ -30,8 +30,16 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
 
   const isReftable = section.kind === "reftable" && !!section.reftable;
   const isDrawing = section.kind === "drawing" && !!section.drawingSlotId;
+  const isTwoCol = section.kind === "fields" && !!section.twoColumn;
   return (
-    <section className={"form-section" + (isReftable ? " is-reftable" : "") + (isDrawing ? " is-drawing" : "")}>
+    <section
+      className={
+        "form-section" +
+        (isReftable ? " is-reftable" : "") +
+        (isDrawing ? " is-drawing" : "") +
+        (isTwoCol ? " is-2col" : "")
+      }
+    >
       <div className="form-section-head">
         <button
           type="button"
@@ -69,7 +77,13 @@ function FormSection({ sheet, section }: { sheet: string; section: Section }) {
             <>
               {isReftable && <RefTable sheet={sheet} region={section.reftable!} />}
               {section.items.length > 0 && (
-                <div className={"form-fields" + (isReftable ? " form-fields-result" : "")}>
+                <div
+                  className={
+                    "form-fields" +
+                    (isReftable ? " form-fields-result" : "") +
+                    (isTwoCol ? " form-fields-2col" : "")
+                  }
+                >
                   {section.items.map((it) => (
                     <FormField key={it.addr} sheet={sheet} item={it} />
                   ))}

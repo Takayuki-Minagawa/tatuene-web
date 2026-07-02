@@ -4,12 +4,18 @@
  * コンパクトな表で描画する。フォーム化に向かない密な表をそのまま使えるようにする。
  * 入力/ドロップダウンは CellInput、数式は表示専用、それ以外は素のテキスト。
  */
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import CellInput from "./CellInput";
-import FormulaCell from "./FormulaCell";
-import { engine } from "@/engine/store";
+import { engine, useDisplay } from "@/engine/store";
 import { computeMerges, addrOf, colName, widthPx, isFormulaValue } from "@/lib/grid";
 import type { RefTableRegion } from "@/lib/sheet-parser";
+
+/** 数式セルの表示。未入力由来の 0（W×Hが空欄など）は薄く表示して判読しやすくする。 */
+function RefFormulaCell({ sheet, addr }: { sheet: string; addr: string }) {
+  const v = useDisplay(sheet, addr);
+  const isZero = /^0(\.0+)?$/.test(v);
+  return isZero ? <span className="muted-zero">{v}</span> : <>{v}</>;
+}
 
 export default function RefTable({ sheet, region }: { sheet: string; region: RefTableRegion }) {
   const model = engine().model.sheets[sheet];
@@ -38,8 +44,23 @@ export default function RefTable({ sheet, region }: { sheet: string; region: Ref
   const colWidth = (c: number, idx: number) =>
     colEmpty[idx] ? EMPTY_W : Math.min(widthPx(model.colWidths[colName(c)]), MAX_W);
 
+  // 見出し行の固定: 行の実高さを測って top のオフセットを積み上げる。
+  // 行高は内容依存のため描画後に計測し、再レンダーを避けて CSS 変数へ直接書く
+  // （td 側は top: var(--sticky-top-N) を参照する）。
+  const stickyCount = region.stickyHeaderRows ?? 0;
+  const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!stickyCount || !scrollRef.current) return;
+    let acc = 0;
+    for (let i = 0; i < stickyCount; i++) {
+      scrollRef.current.style.setProperty(`--sticky-top-${i}`, `${acc}px`);
+      acc += rowRefs.current[i]?.offsetHeight ?? 0;
+    }
+  });
+
   return (
-    <div className="reftable-scroll">
+    <div className="reftable-scroll" ref={scrollRef}>
       <table className="reftable">
         <colgroup>
           {cols.map((c, idx) => (
@@ -47,8 +68,17 @@ export default function RefTable({ sheet, region }: { sheet: string; region: Ref
           ))}
         </colgroup>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r}>
+          {rows.map((r, ri) => (
+            <tr
+              key={r}
+              ref={
+                ri < stickyCount
+                  ? (el) => {
+                      rowRefs.current[ri] = el;
+                    }
+                  : undefined
+              }
+            >
               {cols.map((c) => {
                 const key = `${r},${c}`;
                 if (covered.has(key)) return null;
@@ -72,7 +102,7 @@ export default function RefTable({ sheet, region }: { sheet: string; region: Ref
                     />
                   );
                 } else if (isFormula) {
-                  content = <FormulaCell sheet={sheet} addr={addr} />;
+                  content = <RefFormulaCell sheet={sheet} addr={addr} />;
                 } else if (raw !== null && raw !== undefined) {
                   content = String(raw);
                 }
@@ -82,6 +112,16 @@ export default function RefTable({ sheet, region }: { sheet: string; region: Ref
                     rowSpan={rs > 1 ? rs : undefined}
                     colSpan={cs > 1 ? cs : undefined}
                     className={"reftable-cell" + (isInput ? " is-input" : "")}
+                    style={
+                      ri < stickyCount
+                        ? {
+                            position: "sticky",
+                            top: `var(--sticky-top-${ri}, 0px)`,
+                            zIndex: 2,
+                            background: "#fff", // 下の行が透けないよう不透明に
+                          }
+                        : undefined
+                    }
                   >
                     {content}
                   </td>

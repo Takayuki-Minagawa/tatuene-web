@@ -15,6 +15,8 @@ export interface ItemOverride {
   numeric?: boolean;
   /** 入力欄を短く表示する（階数など1〜2文字の入力用）。 */
   short?: boolean;
+  /** 2カラムセクション内で全幅にする（住所など長文の項目用）。 */
+  wide?: boolean;
   /** 項目ごとの解説（任意・後から追記可）。 */
   guidance?: string;
 }
@@ -23,6 +25,8 @@ export interface SectionConfig {
   id: string;
   title: string;
   defaultOpen?: boolean;
+  /** 短い項目を2カラムで並べる（スクロール量の削減）。 */
+  twoColumn?: boolean;
   /** 行範囲（1始まり・含む）にある入力を自動回収する。 */
   rows?: [number, number];
   /** 明示的な入力セル一覧（順序維持）。rows より優先して先に配置。 */
@@ -40,8 +44,15 @@ export interface SectionConfig {
   /** セクション解説を行範囲（1始まり）＋列(0始まり)から取得。 */
   guidanceRows?: [number, number];
   guidanceCol?: number;
-  /** 参照表として描画する領域（0始まり・含む）。fields ではなく表で表示。 */
-  reftable?: { fromRow: number; toRow: number; fromCol: number; toCol: number };
+  /** 参照表として描画する領域（0始まり・含む）。fields ではなく表で表示。
+      stickyHeaderRows は領域先頭から固定する見出し行数（縦スクロール時に貼り付く）。 */
+  reftable?: {
+    fromRow: number;
+    toRow: number;
+    fromCol: number;
+    toCol: number;
+    stickyHeaderRows?: number;
+  };
   /** 図面スロットID。指定するとセル表ではなく図面エディタ（評価シートと同じ
       挿入・注釈・編集）を表示する。reftable はカバレッジ抑止（作図セルをフォーム
       項目に出さない）に流用する。 */
@@ -65,12 +76,13 @@ export const SHEET_LAYOUTS: Record<string, SheetLayout> = {
         id: "project",
         title: "物件情報",
         defaultOpen: true,
+        twoColumn: true,
         addrs: ["E30", "I30", "E34", "E38", "H38", "E42", "E46"],
         formulas: ["H42"],
         overrides: [
           { addr: "E30", label: "工事名" },
           { addr: "I30", label: "工事種別" },
-          { addr: "E34", label: "住所" },
+          { addr: "E34", label: "住所", wide: true },
           {
             addr: "E38",
             label: "場所",
@@ -88,6 +100,7 @@ export const SHEET_LAYOUTS: Record<string, SheetLayout> = {
         id: "diagnostician",
         title: "診断者",
         defaultOpen: true,
+        twoColumn: true,
         addrs: ["E49", "I49"],
         overrides: [
           // unit:"" は右隣の見出し文字（「氏名」等）を単位として誤検出するのを抑止
@@ -121,8 +134,8 @@ export const SHEET_LAYOUTS: Record<string, SheetLayout> = {
         defaultOpen: true,
         guidance:
           "建材の性能データです。性能値は「A：熱伝導率＋厚み」または「B：熱貫流率(U)」のどちらかで入力します（両方入れた場合はBが優先）。計算シートには熱抵抗値(R)が反映されます。変更後は計算シートの建材を選び直してください。",
-        // 見出し（10〜11行）＋データ（12〜170行）、列 B〜G を表で表示。
-        reftable: { fromRow: 9, toRow: 169, fromCol: 1, toCol: 6 },
+        // 見出し（10〜11行）＋データ（12〜170行）、列 B〜G を表で表示。見出し2行は固定。
+        reftable: { fromRow: 9, toRow: 169, fromCol: 1, toCol: 6, stickyHeaderRows: 2 },
       },
     ],
   },
@@ -149,11 +162,17 @@ function calcSections(variant: "現状" | "改修後"): SectionConfig[] {
         id: "basic",
         title: "基本データ",
         defaultOpen: true,
+        twoColumn: true,
         rows: [9, 17],
         guidanceRows: [20, 38],
         guidanceCol: 8, // I列の「◇記入上の注意」
       },
-      sec("openings", "開口部（窓・外部ドア・室内ドア）", 18, 40, C, false),
+      // 表本体（B〜F列）だけを表示し、右側の◇記入上の注意（H/I列）は「解説▼」へ集約する
+      sec("openings", "開口部（窓・外部ドア・室内ドア）", 18, 38, 5, false, undefined, {
+        guidanceRows: [20, 38],
+        guidanceCol: 8,
+        stickyHeaderRows: 2,
+      }),
       planSec("plan", "間取り図（現状図）", 41, 65, C, "slot1",
         "間取り図の画像を取り込み（「画像」ボタン／ドラッグ&ドロップ／Ctrl+V）、矢印・丸数字・文字で注釈できます。ここで作図した図はそのまま評価シートの「現状図」に反映されます。"),
       // 壁部：Rt/Ut 等の中間計算（演算子の足場）は表示せず、建材選択をラベル＋
@@ -223,6 +242,7 @@ function calcSections(variant: "現状" | "改修後"): SectionConfig[] {
       id: "basic-data",
       title: "基本データ（現状シートから自動計算）",
       defaultOpen: true,
+      twoColumn: true,
       formulas: [
         "D10", "I10",
         "D11", "I11", "N11",
@@ -234,7 +254,8 @@ function calcSections(variant: "現状" | "改修後"): SectionConfig[] {
       ],
     },
     sec("schedule", "断熱改修面積・開口部", 18, 40, C, true,
-      "白いセルに入力します。断熱改修する部位の面積を【断熱改修面積】に記入してください（面積が空欄だと建材を選んでも計算に反映されません）。"),
+      "白いセルに入力します。断熱改修する部位の面積を【断熱改修面積】に記入してください（面積が空欄だと建材を選んでも計算に反映されません）。",
+      { stickyHeaderRows: 2 }),
     planSec("plan", "間取り図・改修部分図（改修図）", 41, 64, C, "slot2",
       "間取り・改修部分の図を取り込み、矢印・丸数字・文字で注釈できます。ここで作図した図はそのまま評価シートの「改修図」に反映されます。"),
     // 壁部：外壁部は「既存建材」と「断熱建材」の2ブロック、内壁・室内ドアも分解。
@@ -300,14 +321,27 @@ function sec(
   toCol: number,
   defaultOpen: boolean,
   guidance?: string,
+  opts?: {
+    guidanceRows?: [number, number];
+    guidanceCol?: number;
+    stickyHeaderRows?: number;
+  },
 ): SectionConfig {
   return {
     id,
     title,
     defaultOpen,
     guidance,
+    guidanceRows: opts?.guidanceRows,
+    guidanceCol: opts?.guidanceCol,
     // reftable は 0始まり・含む。行範囲は 1始まりで受け取り変換。
-    reftable: { fromRow: fromRow - 1, toRow: toRow - 1, fromCol: 0, toCol },
+    reftable: {
+      fromRow: fromRow - 1,
+      toRow: toRow - 1,
+      fromCol: 0,
+      toCol,
+      stickyHeaderRows: opts?.stickyHeaderRows,
+    },
   };
 }
 

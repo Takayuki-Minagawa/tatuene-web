@@ -231,6 +231,30 @@ table.xl-grid {
 .form-section.is-reftable {
   max-width: 100%;
 }
+/* 2カラムセクション: 短い項目を横に並べてスクロール量を減らす */
+.form-section.is-2col {
+  max-width: 960px;
+}
+.form-fields-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+}
+.form-fields-2col .form-field.is-wide {
+  grid-column: 1 / -1;
+}
+/* 未入力由来のゼロ値（参照表）: 薄色で「まだ入力していない」ことを示す */
+.reftable .muted-zero {
+  color: #a9b2bc;
+}
+@media (max-width: 700px) {
+  .form-section.is-2col {
+    max-width: var(--a4-width);
+  }
+  .form-fields-2col {
+    grid-template-columns: 1fr;
+  }
+}
 .form-section-head {
   display: flex;
   align-items: center;
@@ -376,7 +400,9 @@ table.xl-grid {
 
 /* 参照表（材料グリッド・部材性能） */
 .reftable-scroll {
-  overflow-x: auto;
+  overflow: auto;
+  /* 縦に長い表は枠内スクロールにして、sticky の見出し行が効くようにする */
+  max-height: 72vh;
   padding: 8px 0 12px;
   /* 幅に収まらない場合の水平スライダーを常時はっきり見せる */
   scrollbar-width: auto;

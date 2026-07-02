@@ -1,6 +1,6 @@
 "use client";
 /** page.tsx から抽出した画面ロジックのフック（ズーム・空欄ジャンプ・ドラフト復元）。 */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { engine, useEngineVersion } from "@/engine/store";
 import { isBlank, type SheetModel } from "@/engine/workbook";
@@ -9,23 +9,40 @@ import { applyData } from "@/lib/storage";
 
 /** 表示倍率（縮小・拡大・全体フィット）。シート切替後も維持。 */
 export function useZoom(mainRef: RefObject<HTMLElement | null>) {
-  const MIN_SCALE = 0.2;
+  // 横に広い帳票（評価シート）を全体フィットさせると2割を下回るため、下限は0.1
+  const MIN_SCALE = 0.1;
   const MAX_SCALE = 2;
   const [scale, setScale] = useState(1);
   const clampScale = (s: number) =>
     Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.round(s * 100) / 100));
   const zoomBy = (delta: number) => setScale((s) => clampScale(s + delta));
+  // fitToView を連続呼び出し（自動フィットのリトライ等）しても正しく動くよう、
+  // 現在倍率は ref で参照する（stateのクロージャだと直前の倍率で計算してしまう）
+  const scaleRef = useRef(1);
+  useEffect(() => {
+    scaleRef.current = scale;
+  });
   // 現在のシート全体がペインに収まる倍率を算出して適用（線形なので一発で確定する）
-  function fitToView() {
+  const fitToView = useCallback(() => {
     const pane = mainRef.current?.querySelector<HTMLElement>(".grid-scroll");
     if (!pane || !pane.scrollWidth || !pane.scrollHeight) return;
     const ratio =
       Math.min(pane.clientWidth / pane.scrollWidth, pane.clientHeight / pane.scrollHeight) *
-      scale *
+      scaleRef.current *
       0.98; // 端の罫線が切れないよう少し余白を残す
     setScale(clampScale(ratio));
-  }
-  return { scale, setScale, zoomBy, fitToView, MIN_SCALE, MAX_SCALE };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // 幅だけをペインに合わせる（縦長の帳票の初期表示用。縦はスクロールで見る。
+  // 行高はフォント下限より縮まないため、全体フィットだと過剰に縮小されてしまう）
+  const fitToWidth = useCallback(() => {
+    const pane = mainRef.current?.querySelector<HTMLElement>(".grid-scroll");
+    if (!pane || !pane.scrollWidth) return;
+    const ratio = (pane.clientWidth / pane.scrollWidth) * scaleRef.current * 0.98;
+    setScale(clampScale(ratio));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return { scale, setScale, zoomBy, fitToView, fitToWidth, MIN_SCALE, MAX_SCALE };
 }
 
 /** アクティブシートの空欄数と、次の空欄へのジャンプ。 */
@@ -123,9 +140,11 @@ export function useSaveDataDrop(onFiles: (files: File[]) => void) {
 
 /** 起動時に前回のドラフトがあれば復元確認する（1回限り）。 */
 export function useDraftRestore(opts: {
-  flash: (m: string) => void;
+  flash: (m: string, kind?: "info" | "error") => void;
+  /** アプリ内確認ダイアログ（confirm() 相当の Promise API）。 */
+  confirm: (message: string, o?: { okLabel?: string; cancelLabel?: string }) => Promise<boolean>;
 }) {
-  const { flash } = opts;
+  const { flash, confirm } = opts;
   const draftChecked = useRef(false);
   useEffect(() => {
     if (draftChecked.current) return;
@@ -136,7 +155,11 @@ export function useDraftRestore(opts: {
       const when = draft.data.savedAt
         ? new Date(draft.data.savedAt).toLocaleString("ja-JP")
         : "日時不明";
-      if (confirm(`前回の編集データが残っています（${when}）。復元しますか？`)) {
+      const ok = await confirm(
+        `前回の編集データが残っています（${when}）。復元しますか？`,
+        { okLabel: "復元する", cancelLabel: "破棄する" },
+      );
+      if (ok) {
         try {
           applyData(draft.data, draft.images);
           flash("前回の編集を復元しました");
@@ -146,6 +169,7 @@ export function useDraftRestore(opts: {
           flash(
             "復元に失敗したため、残っていた編集データを破棄しました: " +
               (err instanceof Error ? err.message : String(err)),
+            "error",
           );
         }
       } else {

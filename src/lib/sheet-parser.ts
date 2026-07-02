@@ -29,6 +29,8 @@ export interface FormItem {
   numeric?: boolean;
   /** 入力欄を短く表示する（階数など1〜2文字の入力用）。 */
   short?: boolean;
+  /** 2カラムセクション内で全幅にする（住所など長文の項目用）。 */
+  wide?: boolean;
   /** 項目ごとの解説（任意・後から追記可）。 */
   guidance?: string;
 }
@@ -38,12 +40,16 @@ export interface RefTableRegion {
   toRow: number; // 0始まり・含む
   fromCol: number;
   toCol: number;
+  /** 領域先頭から固定する見出し行数（縦スクロール時に貼り付く）。 */
+  stickyHeaderRows?: number;
 }
 
 export interface FormSection {
   id: string;
   title: string;
   defaultOpen: boolean;
+  /** 短い項目を2カラムで並べる。 */
+  twoColumn?: boolean;
   /** セクションの解説（自動＝注記由来 or 設定）。 */
   guidance?: string;
   kind: "fields" | "reftable" | "drawing";
@@ -126,6 +132,7 @@ export function parseSheet(
       unit: override?.unit ?? detectUnit(row, col),
       numeric: override?.numeric ?? (kind === "input" && isNumericCell(row, col)),
       short: override?.short,
+      wide: override?.wide,
       guidance: override?.guidance,
     };
   }
@@ -232,6 +239,7 @@ export function parseSheet(
         kind: "formula",
         label: ov?.label ?? detectLabel(row, col),
         unit: ov?.unit ?? detectUnit(row, col),
+        wide: ov?.wide,
         guidance: ov?.guidance,
       });
     }
@@ -240,6 +248,7 @@ export function parseSheet(
       id: sec.id,
       title: sec.title,
       defaultOpen: sec.defaultOpen ?? true,
+      twoColumn: sec.twoColumn,
       guidance: resolveGuidance(sec, data),
       kind: "fields",
       items,

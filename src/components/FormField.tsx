@@ -17,7 +17,7 @@ function FormField({ sheet, item }: { sheet: string; item: FormItem }) {
   const id = useId();
   const [showHelp, setShowHelp] = useState(false);
   return (
-    <div className="form-field">
+    <div className={"form-field" + (item.wide ? " is-wide" : "")}>
       <div className="form-field-head">
         <label className="form-label" htmlFor={item.kind === "formula" ? undefined : id}>
           {item.label}

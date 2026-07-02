@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import SheetGrid from "@/components/SheetGrid";
 import InputSheet from "@/components/InputSheet";
@@ -15,6 +15,7 @@ import { validate, type Issue } from "@/engine/validate";
 import { exportReportPdf } from "@/lib/pdf";
 import { SHEETS } from "@/lib/sheets";
 import { useZoom, useEmptyJump, useDraftRestore, useSaveDataDrop } from "./hooks";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 // ヘッダーの白抜き（ゴースト）ボタンの共通スタイル
 const GHOST_BTN_STYLE: React.CSSProperties = {
@@ -27,18 +28,21 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+type Toast = { text: string; kind: "info" | "error" };
+
 export default function Home() {
   const model = engine().model;
   const sheets = model.sheetOrder;
   const [active, setActive] = useState(sheets[0]);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<Toast | null>(null);
   const [issues, setIssues] = useState<Issue[] | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const { confirmDialog, confirmOpen, dialogElement } = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // 表示倍率（縮小・拡大・全体フィット）
   const mainRef = useRef<HTMLElement>(null);
-  const { scale, setScale, zoomBy, fitToView, MIN_SCALE, MAX_SCALE } = useZoom(mainRef);
+  const { scale, setScale, zoomBy, fitToView, fitToWidth, MIN_SCALE, MAX_SCALE } = useZoom(mainRef);
 
   // PDF生成時のみ帳票(評価シート)をマウントする
   const [reportMounted, setReportMounted] = useState(false);
@@ -49,15 +53,42 @@ export default function Home() {
   const { emptyCount, jumpNextEmpty } = useEmptyJump(mainRef, active, sheetModel);
   // フォーム表示のシートでは、グリッド専用の操作（入力モード・空欄ジャンプ・表示倍率）は出さない。
   const isFormSheet = !!getSheetLayout(active);
+  // 評価シートは読み取り専用の帳票（忠実描画では入力欄自体が無い）ため、
+  // 入力支援（入力モード・空欄ジャンプ）は出さず、表示倍率のみ出す。
+  const isReportSheet = active === SHEETS.evaluation;
 
-  function flash(m: string) {
-    setMsg(m);
-    setTimeout(() => setMsg(null), 3500);
+  // 評価シートは横に広い帳票なので、初回表示時のみ全体フィットさせる。
+  // （以後はユーザーの倍率操作を尊重して再フィットしない）
+  const reportFitted = useRef(false);
+  useEffect(() => {
+    if (!isReportSheet || reportFitted.current) return;
+    reportFitted.current = true;
+    // 帳票は横に広いので幅をペインに合わせる（縦はスクロールで見る）。
+    // 大きな表のレイアウトはフォント読込等で後から確定するため、
+    // 数回フィットを試行して収束させる。
+    let cancelled = false;
+    let tries = 0;
+    const attempt = () => {
+      if (cancelled) return;
+      fitToWidth();
+      // 極小倍率ではフォント下限により幅が線形に縮まないため、複数回で収束させる
+      if (++tries < 6) setTimeout(attempt, 200);
+    };
+    requestAnimationFrame(() => requestAnimationFrame(attempt));
+    return () => {
+      cancelled = true;
+    };
+  }, [isReportSheet, fitToWidth]);
+
+  function flash(m: string, kind: "info" | "error" = "info") {
+    setMsg({ text: m, kind });
+    // エラーは読む時間を長めに取る
+    setTimeout(() => setMsg(null), kind === "error" ? 6000 : 3500);
   }
 
   // ドラフト自動保存と、起動時の復元確認
   useDraftAutosave();
-  useDraftRestore({ flash });
+  useDraftRestore({ flash, confirm: confirmDialog });
 
   function runCheck() {
     setIssues(validate(engine()));
@@ -78,7 +109,7 @@ export default function Home() {
       await exportReportPdf(node, currentTitle() || "診断");
       flash("PDF帳票を保存しました");
     } catch (e) {
-      flash("PDF生成エラー: " + errorMessage(e));
+      flash("PDF生成エラー: " + errorMessage(e), "error");
     } finally {
       setReportMounted(false);
     }
@@ -107,7 +138,7 @@ export default function Home() {
           : `読込完了: ${main.name} ほか${files.length - 1}件`,
       );
     } catch (err) {
-      flash(`読込エラー: ${errorMessage(err)}`);
+      flash(`読込エラー: ${errorMessage(err)}`, "error");
     }
   }
 
@@ -121,7 +152,7 @@ export default function Home() {
   // 保存データ（ZIP／JSON＋画像／フォルダ）のドラッグ&ドロップ読込
   useSaveDataDrop(loadFromFiles);
 
-  const modalOpen = showManual || issues !== null;
+  const modalOpen = showManual || issues !== null || confirmOpen;
 
   return (
     <>
@@ -158,7 +189,7 @@ export default function Home() {
                 clearDraft();
                 flash("保存しました（.zip）");
               } catch (err) {
-                flash("保存エラー: " + errorMessage(err));
+                flash("保存エラー: " + errorMessage(err), "error");
               }
             }}
           >
@@ -205,9 +236,8 @@ export default function Home() {
             {s}
           </button>
         ))}
-        {/* 入力支援（入力モード切替・未入力ジャンプ）・表示倍率 ※グリッド表示のシートのみ */}
-        {!isFormSheet && (
-        <>
+        {/* 入力支援（入力モード切替・未入力ジャンプ）※グリッド表示の入力シートのみ */}
+        {!isFormSheet && !isReportSheet && (
         <div className="ml-auto flex items-center gap-1 self-center pr-2 text-xs text-slate-600">
           <button
             onClick={() => setInputOnly((v) => !v)}
@@ -231,8 +261,17 @@ export default function Home() {
             空欄 {emptyCount}｜次へ ⏭
           </button>
         </div>
-        {/* 表示倍率（縮小・拡大・全体表示・標準に戻す） */}
-        <div role="group" aria-label="表示倍率" className="flex items-center gap-1 self-center pr-1 text-xs text-slate-600">
+        )}
+        {/* 表示倍率（縮小・拡大・全体表示・標準に戻す）※グリッド表示のシートのみ */}
+        {!isFormSheet && (
+        <div
+          role="group"
+          aria-label="表示倍率"
+          className={
+            (isReportSheet ? "ml-auto " : "") +
+            "flex items-center gap-1 self-center pr-1 text-xs text-slate-600"
+          }
+        >
           <button
             onClick={() => zoomBy(-0.1)}
             disabled={scale <= MIN_SCALE}
@@ -270,12 +309,15 @@ export default function Home() {
             100%
           </button>
         </div>
-        </>
         )}
         <button
           className={isFormSheet ? "ml-auto px-3 py-2 text-xs self-center" : "px-3 py-2 text-xs self-center"}
-          onClick={() => {
-            if (confirm("すべての入力と図面を初期状態に戻します。よろしいですか？")) {
+          onClick={async () => {
+            const ok = await confirmDialog(
+              "すべての入力と図面を初期状態に戻します。よろしいですか？",
+              { okLabel: "初期化する" },
+            );
+            if (ok) {
               skipNextAutosave();
               resetDefaults();
               clearDrawings();
@@ -293,8 +335,9 @@ export default function Home() {
       <main
         ref={mainRef}
         className={
-          // 評価シートは出力帳票なので「空欄ガイド」のハイライト（黄色＋オレンジ縦線）を出さない。
-          (active === SHEETS.evaluation ? "" : "input-guide ") +
+          // 空欄ガイド（黄色＋オレンジ縦線）は入力シートのみ。
+          // 評価シートは出力帳票、部材性能シートは空き行が正常なマスタ表のため出さない。
+          (active === SHEETS.evaluation || active === SHEETS.materials ? "" : "input-guide ") +
           "flex-1 p-3 " +
           (getSheetLayout(active) ? "overflow-auto" : "overflow-hidden")
         }
@@ -323,6 +366,9 @@ export default function Home() {
       {/* 操作マニュアル（inert領域の外） */}
       {showManual && <Manual onClose={() => setShowManual(false)} />}
 
+      {/* 確認ダイアログ（初期化・ドラフト復元。inert領域の外） */}
+      {dialogElement}
+
       {/* データチェック結果（inert領域の外） */}
       {issues && (
         <CheckPanel
@@ -336,15 +382,20 @@ export default function Home() {
         />
       )}
 
-      {/* トースト */}
+      {/* トースト（エラーは赤系で区別） */}
       {msg && (
         <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-4 right-4 px-4 py-2 rounded-md shadow-lg text-sm"
-          style={{ background: "#222", color: "#fff" }}
+          role={msg.kind === "error" ? "alert" : "status"}
+          aria-live={msg.kind === "error" ? "assertive" : "polite"}
+          className="fixed bottom-4 right-4 px-4 py-2 rounded-md shadow-lg text-sm max-w-[70vw]"
+          style={
+            msg.kind === "error"
+              ? { background: "#b3261e", color: "#fff" }
+              : { background: "#222", color: "#fff" }
+          }
         >
-          {msg}
+          {msg.kind === "error" && <span aria-hidden>⚠ </span>}
+          {msg.text}
         </div>
       )}
     </>
